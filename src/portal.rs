@@ -18,6 +18,10 @@ impl Settings {
         }
     }
     
+    pub(crate) fn change_setting(ns: &str, key: &str, value: Value) {
+        
+    }
+    
 }
 
 #[interface(name = "org.freedesktop.impl.portal.Settings")]

@@ -3,6 +3,8 @@ use std::future::pending;
 use zbus::blocking::connection;
 
 mod portal;
+mod sunrise;
+mod location;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
