@@ -18,9 +18,9 @@ impl Settings {
     }
     
     pub(crate) fn change_setting(&mut self, ns: &str, key: &str, value: Value) {
-        
+
         self.values.insert((ns.to_string(), key.to_string()), value.try_to_owned().unwrap());
-        
+
     }
     
 }
