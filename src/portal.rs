@@ -3,22 +3,23 @@ use std::collections::HashMap;
 use zbus::interface;
 use zbus::object_server::SignalContext;
 use zbus::zvariant::{OwnedValue, Value};
-use zbus::zvariant::Value::U32;
 
 pub(crate) struct Settings {
-    pub(crate) values: HashMap<(&'static str, &'static str), Value<'static>>
+    pub(crate) values: HashMap<(String, String), OwnedValue>
 }
 
 impl Settings {
     pub(crate) fn new() -> Self {
         Self {
             values: HashMap::from(
-                [(("org.freedesktop.appearance", "color-scheme"), U32(1))]
+                [(("org.freedesktop.appearance".to_string(), "color-scheme".to_string()), OwnedValue::from(1))]
             )
         }
     }
     
-    pub(crate) fn change_setting(ns: &str, key: &str, value: Value) {
+    pub(crate) fn change_setting(&mut self, ns: &str, key: &str, value: Value) {
+        
+        self.values.insert((ns.to_string(), key.to_string()), value.try_to_owned().unwrap());
         
     }
     
@@ -30,7 +31,7 @@ impl Settings {
     /// Read method
     fn read(&self, namespace: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
 
-        match self.values.get(&(namespace, key)) {
+        match self.values.get(&(namespace.to_string(), key.to_string())) {
             Some(val) => Ok(val.try_to_owned().unwrap()),
             None => Err(zbus::fdo::Error::UnknownProperty("Requested setting not found".to_string()))
         }
@@ -38,18 +39,18 @@ impl Settings {
     }
 
     /// ReadAll method
-    fn read_all(&self, namespaces: Box<[&str]>) -> HashMap<&str, HashMap<&str, OwnedValue>> {
+    fn read_all(&self, namespaces: Box<[&str]>) -> HashMap<String, HashMap<String, OwnedValue>> {
 
-        let mut results: HashMap<&str, HashMap<&str, OwnedValue>> = HashMap::new();
+        let mut results: HashMap<String, HashMap<String, OwnedValue>> = HashMap::new();
 
         for ns in self.values.iter() {
             
-            if glob(&namespaces, ns.0.0) {
-                if !results.contains_key(ns.0.0) {
-                    results.insert(ns.0.0, HashMap::new());
+            if glob(&namespaces, &ns.0.0) {
+                if !results.contains_key(&ns.0.0) {
+                    results.insert(ns.0.0.to_owned(), HashMap::new());
                 }
                 
-                results.get_mut(ns.0.0).unwrap().insert(ns.0.1, ns.1.try_to_owned().unwrap());
+                results.get_mut(&ns.0.0).unwrap().insert(ns.0.1.to_owned(), ns.1.try_to_owned().unwrap());
             }
 
         }
