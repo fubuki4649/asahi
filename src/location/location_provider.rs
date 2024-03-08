@@ -11,7 +11,7 @@ pub struct LocationProvider {
 
 impl LocationProvider {
     
-    pub fn new(on_coords_acquired: Box<dyn FnMut(f64, f64)>) -> LocationProvider {
+    pub fn new(on_coords_acquired: Box<dyn FnMut(f64, f64)>) -> Self {
         Self {
             on_coords_acquired
         }

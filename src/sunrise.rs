@@ -2,7 +2,7 @@ use tokio::time::{sleep, Duration};
 use chrono::{Datelike, Utc};
 use sunrise::sunrise_sunset;
 
-struct Sunrise {
+pub struct Sunrise {
     
     sunrise: i64,
     sunset: i64,
@@ -20,6 +20,20 @@ struct Sunrise {
 }
 
 impl Sunrise {
+
+    pub fn new(toggle_dark_mode: Box<dyn FnMut(bool)>) -> Self {
+        Self {
+            sunrise: 0,
+            sunset: 0,
+            longitude: 0.0,
+            latitude: 0.0,
+            year: 0,
+            month: 0,
+            day: 0,
+            is_dark_mode: false,
+            toggle_dark_mode
+        }
+    }
     
     pub async fn start(&mut self) {
         

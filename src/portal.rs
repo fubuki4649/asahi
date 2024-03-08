@@ -1,28 +1,35 @@
 //! # D-Bus interface for: `org.freedesktop.impl.portal.Settings`
 use std::collections::HashMap;
-use zbus::interface;
+
+use zbus::{Connection, interface};
 use zbus::object_server::SignalContext;
 use zbus::zvariant::{OwnedValue, Value};
 
-pub(crate) struct Settings {
-    pub(crate) values: HashMap<(String, String), OwnedValue>
+pub struct Settings {
+    pub values: HashMap<(String, String), OwnedValue>
 }
 
 impl Settings {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
+        
         Self {
             values: HashMap::from(
                 [(("org.freedesktop.appearance".to_string(), "color-scheme".to_string()), OwnedValue::from(1))]
-            )
+            ),
         }
+        
     }
     
-    pub(crate) fn change_setting(&mut self, ns: &str, key: &str, value: Value) {
+    pub async fn change_setting(&mut self, ns: &str, key: &str, value: Value<'_>) {
 
+        let conn = Connection::session().await.unwrap();
+        let ctxt = SignalContext::new(&conn, "/org/freedesktop/portal/desktop").unwrap();
+        
         self.values.insert((ns.to_string(), key.to_string()), value.try_to_owned().unwrap());
+        Self::setting_changed(&ctxt, ns, key, value).await.unwrap();
 
     }
-    
+
 }
 
 #[interface(name = "org.freedesktop.impl.portal.Settings")]
