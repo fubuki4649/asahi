@@ -20,10 +20,9 @@ impl Settings {
         
     }
     
-    pub async fn change_setting(&mut self, ns: &str, key: &str, value: Value<'_>) {
-
-        let conn = Connection::session().await.unwrap();
-        let ctxt = SignalContext::new(&conn, "/org/freedesktop/portal/desktop").unwrap();
+    pub async fn change_setting(&mut self, conn: &Connection, ns: &str, key: &str, value: Value<'_>) {
+        
+        let ctxt = SignalContext::new(conn, "/org/freedesktop/portal/desktop").unwrap();
         
         self.values.insert((ns.to_string(), key.to_string()), value.try_to_owned().unwrap());
         Self::setting_changed(&ctxt, ns, key, value).await.unwrap();
