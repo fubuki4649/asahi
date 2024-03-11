@@ -1,8 +1,14 @@
-use tokio::time::{sleep, Duration};
+use std::error::Error;
+
 use chrono::{Datelike, Utc};
 use sunrise::sunrise_sunset;
+use tokio::time::{Duration, sleep};
+use zbus::connection;
+use zbus::zvariant::Value::U32;
 
-pub struct Sunrise {
+use crate::portal::Settings;
+
+pub struct Asahi {
     
     sunrise: i64,
     sunset: i64,
@@ -14,14 +20,13 @@ pub struct Sunrise {
     month: u32,
     day: u32,
     
-    is_dark_mode: bool,
-    toggle_dark_mode: Box<dyn FnMut(bool)>
+    is_dark_mode: bool
     
 }
 
-impl Sunrise {
+impl Asahi {
 
-    pub fn new(toggle_dark_mode: Box<dyn FnMut(bool)>) -> Self {
+    pub fn new() -> Self {
         Self {
             sunrise: 0,
             sunset: 0,
@@ -30,12 +35,22 @@ impl Sunrise {
             year: 0,
             month: 0,
             day: 0,
-            is_dark_mode: false,
-            toggle_dark_mode
+            is_dark_mode: false
         }
     }
     
-    pub async fn start(&mut self) {
+    pub async fn start(&mut self) -> Result<(), Box<dyn Error>> {
+
+        let conn = connection::Builder::session()?
+            .name("org.freedesktop.impl.portal.desktop.asahi")?
+            .serve_at("/org/freedesktop/portal/desktop", Settings::new())?
+            .build().await?;
+
+        let iface_ref = conn
+            .object_server()
+            .interface::<_, Settings>("/org/freedesktop/portal/desktop").await?;
+
+        let mut iface = iface_ref.get_mut().await;
         
         loop {
             
@@ -56,7 +71,7 @@ impl Sunrise {
                 if self.is_dark_mode {
 
                     self.is_dark_mode = false;
-                    self.toggle_dark_mode.as_mut()(false);
+                    iface.change_setting(&conn, "org.freedesktop.appearance", "color-scheme", U32(2)).await;
                     
                 }
                 
@@ -64,7 +79,7 @@ impl Sunrise {
             } else if !self.is_dark_mode {
                 
                 self.is_dark_mode = true;
-                self.toggle_dark_mode.as_mut()(true);
+                iface.change_setting(&conn, "org.freedesktop.appearance", "color-scheme", U32(1)).await;
                 
             }
             
