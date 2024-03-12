@@ -3,15 +3,15 @@ use zbus::export::futures_util::StreamExt;
 use crate::location::geoclue::{AccuracyLevel, LocationProxy, ManagerProxy};
 
 
-pub struct LocationProvider {
+pub struct LocationProvider<'a> {
     
-    on_coords_acquired: Box<dyn FnMut(f64, f64)>
+    on_coords_acquired: &'a mut dyn FnMut(f64, f64)
     
 }
 
-impl LocationProvider {
+impl<'a> LocationProvider<'a> {
     
-    pub fn new(on_coords_acquired: Box<dyn FnMut(f64, f64)>) -> Self {
+    pub fn new(on_coords_acquired: &'a mut dyn FnMut(f64, f64)) -> Self {
         Self {
             on_coords_acquired
         }

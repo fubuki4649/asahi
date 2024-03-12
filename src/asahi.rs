@@ -85,6 +85,7 @@ impl Asahi {
             
             // Sleep - Only check every minute
             sleep(Duration::from_secs(1)).await;
+            
         }
         
     }
