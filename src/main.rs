@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Start location provider
     let mut update_latitude = |latitude: f64, longitude: f64| asahi.update_location(latitude, longitude);
     let mut location = LocationProvider::new(&mut update_latitude);
-    location.start();
+    location.start().await?;
     
     // Do other things or go to wait forever
     pending::<()>().await;

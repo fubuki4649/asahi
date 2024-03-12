@@ -30,9 +30,11 @@ impl<'a> LocationProvider<'a> {
         let mut location_updated = gclue_client.receive_location_updated().await?;
 
         gclue_client.start().await?;
+        
+        println!("Location Provider Started");
 
         loop {
-
+            
             let signal = location_updated.next().await.unwrap();
 
             let args = signal.args()?;
@@ -43,6 +45,8 @@ impl<'a> LocationProvider<'a> {
 
             let latitude = location.latitude().await?;
             let longitude = location.longitude().await?;
+            
+            println!("Latitude: {latitude}, Longitude: {longitude}");
 
             (self.on_coords_acquired)(latitude, longitude);
 

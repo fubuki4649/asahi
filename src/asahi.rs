@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, TimeZone, Utc};
 use sunrise::sunrise_sunset;
 use tokio::time::{Duration, sleep};
 use zbus::connection;
@@ -13,8 +13,8 @@ pub struct Asahi {
     sunrise: i64,
     sunset: i64,
 
-    pub longitude: f64,
-    pub latitude: f64,
+    longitude: f64,
+    latitude: f64,
     
     year: i32,
     month: u32,
@@ -59,8 +59,7 @@ impl Asahi {
             // Check Date and make sure that sunrise/sunset times are for the current day
             if self.year != now.year() || self.month != now.month() || self.day != now.day() {
                 
-                self.get_today();
-                self.update_location(self.latitude, self.longitude);
+                self.update_sunrise();
                 
             }
             
@@ -90,19 +89,28 @@ impl Asahi {
         
     }
     
-    fn get_today(&mut self) {
-        
+    fn update_sunrise(&mut self) {
+    
         let now = Utc::now();
-        
+
         self.year = now.year();
         self.month = now.month();
         self.day = now.day();
+        
+        println!("Date Acquired: {}-{}-{}", self.month, self.day, self.year);
+
+        (self.sunrise, self.sunset) = sunrise_sunset(self.latitude, self.longitude, self.year, self.month, self.day);
+        
+        println!("Sunrise: {}, Sunset: {}", Utc.timestamp_opt(self.sunrise, 0).unwrap(), Utc.timestamp_opt(self.sunset, 0).unwrap())
         
     }
     
     pub fn update_location(&mut self, latitude: f64, longitude: f64) {
 
-        (self.sunrise, self.sunset) = sunrise_sunset(latitude, longitude, self.year, self.month, self.day)
+        self.latitude = latitude;
+        self.longitude = longitude;
+
+        self.update_sunrise();
     
     }
     
