@@ -1,32 +1,30 @@
 use std::error::Error;
-use std::future::{Future, pending};
+use std::future::Future;
 use std::pin::Pin;
 
-use crate::asahi::Asahi;
-use crate::location::location_provider::LocationProvider;
+use tokio::try_join;
+use crate::asahi_state::AsahiState;
+
+use crate::sunrise_watcher::observe_sunrise;
+use crate::location::location_provider::observe_location;
 
 mod portal;
-mod asahi;
+mod sunrise_watcher;
 mod location;
-
-pub type AsyncClosure<T, U> = Box<dyn Fn(T, U) -> Pin<Box<dyn Future<Output = ()>>> + Send>;
-
+mod asahi_state;
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     
-    // Start asahi
-    let mut asahi = Asahi::new();
-    asahi.start();
+    // Initialize asahi
+    let mut state = AsahiState::new();
     
-    // Start location provider
-    let mut update_latitude = |latitude: f64, longitude: f64| asahi.update_location(latitude, longitude);
-    let mut location = LocationProvider::new(&mut update_latitude);
-    location.start().await?;
-    
-    // Do other things or go to wait forever
-    pending::<()>().await;
+    // Start asahi and location provider
+    let location = observe_location(&mut state);
+    let sunrise = observe_sunrise(&mut state);
+
+    try_join!(location, sunrise)?;
 
     Ok(())
     
