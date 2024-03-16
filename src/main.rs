@@ -1,6 +1,5 @@
 use std::error::Error;
-use std::future::Future;
-use std::pin::Pin;
+use std::sync::Mutex;
 
 use tokio::try_join;
 use crate::asahi_state::AsahiState;
@@ -18,11 +17,11 @@ mod asahi_state;
 async fn main() -> Result<(), Box<dyn Error>> {
     
     // Initialize asahi
-    let mut state = AsahiState::new();
+    let state = Mutex::new(AsahiState::new());
     
     // Start asahi and location provider
-    let location = observe_location(&mut state);
-    let sunrise = observe_sunrise(&mut state);
+    let location = observe_location(&state);
+    let sunrise = observe_sunrise(&state);
 
     try_join!(location, sunrise)?;
 

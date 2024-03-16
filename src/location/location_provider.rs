@@ -1,9 +1,10 @@
 use std::error::Error;
+use std::sync::Mutex;
 use zbus::export::futures_util::StreamExt;
 use crate::asahi_state::AsahiState;
 use crate::location::geoclue::{AccuracyLevel, LocationProxy, ManagerProxy};
 
-pub async fn observe_location<'a>(state: & mut AsahiState) -> Result<(), Box<dyn Error>> {
+pub async fn observe_location<'a>(state: &Mutex<AsahiState>) -> Result<(), Box<dyn Error>> {
 
     let conn = zbus::Connection::system().await?;
 
@@ -34,8 +35,8 @@ pub async fn observe_location<'a>(state: & mut AsahiState) -> Result<(), Box<dyn
 
         println!("Latitude: {latitude}, Longitude: {longitude}");
 
-        state.update_location(latitude, longitude);
+        state.lock().unwrap().update_location(latitude, longitude);
 
     }
-    
+
 }

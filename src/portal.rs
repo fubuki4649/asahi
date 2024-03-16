@@ -14,7 +14,7 @@ impl Settings {
         
         Self {
             values: HashMap::from(
-                [(("org.freedesktop.appearance".to_string(), "color-scheme".to_string()), OwnedValue::from(1))]
+                [(("org.freedesktop.appearance".to_string(), "color-scheme".to_string()), OwnedValue::from(2))]
             ),
         }
         
