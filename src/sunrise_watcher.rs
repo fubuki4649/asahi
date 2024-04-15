@@ -17,10 +17,21 @@ pub async fn observe_sunrise(state: &Mutex<AsahiState>) -> Result<(), Box<dyn Er
         .build().await?;
 
     loop {
-        
-        let now = Utc::now();
 
         let mut state_lock = state.lock().unwrap();
+        
+        // Wait for location to be acquired before starting main loop
+        if state_lock.sunrise == 0 && state_lock.sunset == 0 {
+
+            println!("Waiting For Location");
+            drop(state_lock);
+            
+            sleep(Duration::from_secs(1)).await;
+            continue;
+            
+        }
+        
+        let now = Utc::now();
         
         // Check Date and make sure that sunrise/sunset times are for the current day
         if state_lock.year != now.year() || state_lock.month != now.month() || state_lock.day != now.day() {
@@ -31,34 +42,38 @@ pub async fn observe_sunrise(state: &Mutex<AsahiState>) -> Result<(), Box<dyn Er
         
         // Check Dark Mode
         // Disable dark mode between sunrise and sunset
+        let mut new_val: u32  = u32::MAX;
         if state_lock.sunrise <= now.timestamp() && now.timestamp() < state_lock.sunset {
-            
-            if state_lock.is_dark_mode {
-                
-                println!("Dark Mode Disabled");
 
-                state_lock.is_dark_mode = false;
-                set_darkmode(&conn, 2).await?;
-                
+            if state_lock.is_dark_mode {
+                new_val = 2
             }
             
-        // Enable dark mode before sunrise/after sunset
-        } else if !state_lock.is_dark_mode {
-
-            println!("Dark Mode Enabled");
-
+            println!("Dark Mode Disabled");
             state_lock.is_dark_mode = true;
-            set_darkmode(&conn, 1).await?;
+            
+        // Enable dark mode before sunrise/after sunset
+        } else {
+            
+            if !state_lock.is_dark_mode {
+                new_val = 1;
+            }
+            
+            println!("Dark Mode Enabled");
+            state_lock.is_dark_mode = true;
             
         }
-
+        
         drop(state_lock);
+        if new_val != u32::MAX {
+            set_darkmode(&conn, new_val).await?;
+        }
         
         // Sleep - Only check every minute
         sleep(Duration::from_secs(60)).await;
         
     }
-    
+
 }
 
 
