@@ -1,7 +1,8 @@
 use std::error::Error;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use chrono::{Datelike, Utc};
+use tokio::runtime::Runtime;
 use tokio::time::{Duration, sleep};
 use zbus::{connection, Connection};
 use zbus::zvariant::Value::U32;
@@ -11,10 +12,24 @@ use crate::portal::Settings;
 
 pub async fn observe_sunrise(state: &Mutex<AsahiState>) -> Result<(), Box<dyn Error>> {
 
-    let conn = connection::Builder::session()?
+    let conn = Arc::new(connection::Builder::session()?
         .name("org.freedesktop.impl.portal.desktop.asahi")?
         .serve_at("/org/freedesktop/portal/desktop", Settings::new())?
-        .build().await?;
+        .build().await?);
+
+    let shared_conn = Arc::clone(&conn);
+
+    // Set dark mode to no preference before exiting
+    ctrlc::set_handler(move || {
+        println!("Exit Signal Received");
+        let handler_conn = Arc::clone(&shared_conn);
+
+        Runtime::new().unwrap().block_on(async move {
+            set_darkmode(&handler_conn, 0).await.expect("");
+        });
+
+        std::process::exit(0);
+    })?;
 
     loop {
 
