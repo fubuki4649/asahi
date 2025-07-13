@@ -18,18 +18,14 @@
 1. Copy `configs/asahi.portal` to `/usr/share/xdg-desktop-portal/portals/asahi.portal`
 
 
-2. Append `asahi;` to the `default` field in `/usr/share/xdg-desktop-portal/*-portals.config` 
+2. Append `asahi;` to the `default` field in `/usr/share/xdg-desktop-portal/*-portals.config`
 
 
-3. Start `/usr/lib/geoclue-2.0/demos/agent`. Asahi cannot determine sunrise/sunset times without it.
-
-
-4. Finally, start `asahi`
+3. Finally, start `asahi`
 
 
 See the [Arch Wiki](https://wiki.archlinux.org/title/XDG_Desktop_Portal#Configuration) for more information on 
 configuring the XDG Desktop Portal
 
 ### TODO
-- [ ] Provide systemd daemon config files for geoclue and asahi
-- [ ] Create automatic install scripts
+- [ ] Provide systemd daemon files for asahi
