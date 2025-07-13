@@ -35,7 +35,7 @@ pub async fn observe_sunrise(state: &Mutex<AsahiState>) -> Result<(), Box<dyn Er
 
         let mut state_lock = state.lock().unwrap();
         
-        // Wait for location to be acquired before starting main loop
+        // Wait for location_old to be acquired before starting main loop
         if state_lock.sunrise == 0 && state_lock.sunset == 0 {
 
             println!("Waiting For Location");

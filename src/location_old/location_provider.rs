@@ -2,10 +2,10 @@ use std::error::Error;
 use std::sync::Mutex;
 use zbus::export::futures_util::StreamExt;
 use crate::asahi_state::AsahiState;
-use crate::location::geoclue::{AccuracyLevel, LocationProxy, ManagerProxy};
+use crate::location_old::geoclue::{AccuracyLevel, LocationProxy, ManagerProxy};
 
 pub async fn observe_location<'a>(state: &Mutex<AsahiState>) -> Result<(), Box<dyn Error>> {
-
+    
     let conn = zbus::Connection::system().await?;
 
     let gclue_manager = ManagerProxy::new(&conn).await?;
@@ -22,7 +22,13 @@ pub async fn observe_location<'a>(state: &Mutex<AsahiState>) -> Result<(), Box<d
 
     loop {
 
-        let signal = location_updated.next().await.unwrap();
+        println!("Reloop");
+        let sig1 = location_updated.next().await;
+        if sig1.is_none() {
+            println!("Location provider returned None");
+        }
+        let signal = sig1.unwrap();
+        
 
         let args = signal.args()?;
 

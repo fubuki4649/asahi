@@ -1,7 +1,12 @@
+use crate::location::location::Location;
 use chrono::{Datelike, TimeZone, Utc};
 use sunrise::sunrise_sunset;
 
 pub struct AsahiState {
+
+    location: Location,
+
+    // Legacy
 
     pub sunrise: i64,
     pub sunset: i64,
@@ -17,15 +22,15 @@ pub struct AsahiState {
 
 }
 
-
 impl AsahiState {
     
     pub fn new() -> Self {
         Self {
-            sunrise: 0,
-            sunset: 0,
+            location: Location::new(),
             longitude: 0.0,
             latitude: 0.0,
+            sunrise: 0,
+            sunset: 0,
             year: 0,
             month: 0,
             day: 0,
