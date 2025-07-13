@@ -1,2 +1,3 @@
-mod geoclue;
-pub(crate) mod location_provider;
+pub mod location;
+pub mod providers;
+mod provider;
