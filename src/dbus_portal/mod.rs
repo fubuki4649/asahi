@@ -1,2 +1,2 @@
-mod portal;
-mod wrapper;
+pub mod portal;
+pub mod wrapper;
