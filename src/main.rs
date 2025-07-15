@@ -1,4 +1,4 @@
-use std::error::Error;
+use anyhow::Error;
 use std::sync::{LazyLock, Mutex};
 
 use tokio::try_join;
@@ -7,7 +7,7 @@ use crate::asahi_state::AsahiState;
 use crate::sunrise_watcher::observe_sunrise;
 use crate::location_old::location_provider::observe_location;
 
-mod portal;
+mod dbus_portal;
 mod sunrise_watcher;
 mod location_old;
 mod asahi_state;
@@ -20,7 +20,7 @@ static CONTEXT: LazyLock<AsahiState> = LazyLock::new(|| {
 
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Error> {
     
     // Initialize asahi
     let state = Mutex::new(AsahiState::new());
