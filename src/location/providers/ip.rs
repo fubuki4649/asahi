@@ -1,5 +1,5 @@
 use crate::location::location::Location;
-use crate::location::provider::LocationProvider;
+use crate::location::provider_trait::LocationProvider;
 use anyhow::{anyhow, Error};
 use log::{debug, info, warn};
 use std::env;
@@ -7,13 +7,20 @@ use std::fs::File;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
 
 pub struct IpLocationProvider;
 
 impl IpLocationProvider {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        // Set dark mode to no preference before exiting
+        ctrlc::set_handler(move || {
+            info!("IP Location Provider: Exit Signal Received");
+            info!("Saving last known location to hard drive cache");
+        }).unwrap();
+        Self
+    }
 
     // Gets the location as (lat, lon)
     fn get_location_ip() -> Result<(f64, f64), Error> {
@@ -81,7 +88,7 @@ impl IpLocationProvider {
 
 impl LocationProvider for IpLocationProvider {
     fn get_location() -> Location {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
+        let now = SystemTime::now();
 
         // Try IP location first
         match Self::get_location_ip() {

@@ -1,5 +1,6 @@
 use crate::dbus_portal::portal::Portal;
 use anyhow::Error;
+use log::info;
 use zbus::blocking::{connection, Connection};
 use zbus::zvariant::Value::U32;
 
@@ -17,7 +18,7 @@ impl PortalInterface {
 
         // Set dark mode to no preference before exiting
         ctrlc::set_handler(move || {
-            println!("Exit Signal Received");
+            info!("Portal: Exit Signal Received");
         })?;
 
         Ok(Self { conn })

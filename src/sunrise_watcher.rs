@@ -6,9 +6,9 @@ use tokio::time::{Duration, sleep};
 use zbus::{connection, Connection};
 use zbus::zvariant::Value::U32;
 
-use crate::asahi_state::AsahiState;
+use crate::context::Context;
 
-pub async fn observe_sunrise(state: &Mutex<AsahiState>) -> Result<(), Error> {
+pub async fn observe_sunrise(state: &Mutex<Context>) -> Result<(), Error> {
 
     let conn = Arc::new(connection::Builder::session()?
         .name("org.freedesktop.impl.portal.desktop.asahi")?
