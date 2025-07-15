@@ -1,16 +1,16 @@
 use crate::location::location::Location;
 use crate::location::provider::LocationProvider;
 use anyhow::{anyhow, Error};
+use log::{debug, info, warn};
+use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
-use log::{debug, info, warn};
+
 
 pub struct IpLocationProvider;
-
 
 impl IpLocationProvider {
     pub fn new() -> Self { Self }
