@@ -29,3 +29,6 @@ configuring the XDG Desktop Portal
 
 ### TODO
 - [ ] Provide systemd daemon files for asahi
+- [ ] Ensure graceful exit (write proper exit hooks)
+- [ ] A CLI to pair the daemon with
+
