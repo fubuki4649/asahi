@@ -23,13 +23,11 @@ impl PortalInterface {
         Ok(Self { conn })
     }
 
-    fn set_darkmode(&mut self, value: u32) -> Result<(), Error> {
-
+    fn set_darkmode(&self, value: u32) {
         let iref = self.conn.object_server()
             .interface::<_, Portal>("/org/freedesktop/dbus_portal/desktop")
             .expect("Interface not found at path");
 
         let _ = iref.get_mut().change_setting(iref.signal_emitter(), "org.freedesktop.appearance", "color-scheme", U32(value));
-        Ok(())
     }
 }
