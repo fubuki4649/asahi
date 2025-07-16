@@ -1,4 +1,4 @@
 [portal]
 DBusName=org.freedesktop.impl.portal.desktop.asahi
 Interfaces=org.freedesktop.impl.portal.Settings
-UseIn=wlroots;Hyprland;sway;Wayfire;river;gtk;
+UseIn=wlroots;Hyprland;sway;Wayfire;river;gtk;gnome;

@@ -1,0 +1,12 @@
+[Unit]
+Description=Portal service (Asahi Dark Mode Daemon)
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.impl.portal.desktop.asahi
+ExecStart=/usr/lib/xdg-desktop-portal-asahi
+Restart=on-failure
+Slice=session.slice

@@ -13,3 +13,4 @@ log = "0.4.27"
 zbus = "5.8.0"
 sunrise = "2.1.0"
 chrono = { version = "0.4.41", default-features = false, features = ["clock", "std"] }
+simple_logger = "5.0.0"
