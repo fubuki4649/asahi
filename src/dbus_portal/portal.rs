@@ -1,5 +1,6 @@
-//! # D-Bus dbus_portal definition for: `org.freedesktop.impl.dbus_portal.Settings`
+//! # D-Bus portal definition for: `org.freedesktop.impl.portal.Settings`
 use crate::unwrap_or_return;
+use log::debug;
 use std::collections::HashMap;
 use zbus::fdo::Error::UnknownProperty;
 use zbus::interface;
@@ -23,23 +24,35 @@ impl Portal {
 
     pub async fn change_setting(&mut self, emitter: &SignalEmitter<'_>, ns: &str, key: &str, value: Value<'_>) {
         self.values.entry(ns.to_string()).or_insert_with(HashMap::new).insert(key.to_string(), OwnedValue::try_from(value.clone()).unwrap());
+
         Self::setting_changed(emitter, ns, key, value).await.expect("Failed to send signal");
+        debug!("DBus signal sent");
     }
 }
 
-#[interface(name = "org.freedesktop.impl.dbus_portal.Settings")]
+#[interface(name = "org.freedesktop.impl.portal.Settings")]
 impl Portal {
 
-    /// Read method
-    fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
-        let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
-        let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
+    // /// Read method
+    // fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
+    //     let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
+    //     let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
+    //
+    //     Ok(OwnedValue::from(value.try_to_owned().unwrap()))
+    // }
 
-        Ok(OwnedValue::from(value.try_to_owned().unwrap()))
-    }
+    // TODO: figure out if I need ReadOne or not
 
     /// ReadOne method
     fn read_one(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
+        let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
+        let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
+
+        Ok(value.try_to_owned().unwrap())
+    }
+
+    /// Read method
+    fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
         let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
         let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
 

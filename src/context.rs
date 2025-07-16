@@ -2,7 +2,7 @@ use crate::config::SelectedLocationProvider;
 use crate::location::location::Location;
 use crate::location::provider_trait::LocationProvider;
 use chrono::{DateTime, Local, NaiveDate, Utc};
-use log::info;
+use log::{debug, info};
 use sunrise::{SolarDay, SolarEvent};
 
 pub struct Context {
@@ -35,8 +35,8 @@ impl Context {
             self.sunrise = todays_times.event_time(SolarEvent::Sunrise);
             self.sunset = todays_times.event_time(SolarEvent::Sunset);
 
-            info!("Acquired Sunrise/Sunset for {}", today);
-            info!("Sunrise: {}, Sunset: {}", self.sunrise, self.sunset);
+            info!("Acquired Sunrise/Sunset for {} at lat: {}, lon: {}", today, self.location.lat, self.location.lon);
+            debug!("Sunrise: {}, Sunset: {}", self.sunrise, self.sunset);
         }
     }
 

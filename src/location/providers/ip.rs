@@ -15,10 +15,10 @@ pub struct IpLocationProvider;
 impl IpLocationProvider {
     pub fn new() -> Self {
         // Set dark mode to no preference before exiting
-        ctrlc::set_handler(move || {
-            info!("IP Location Provider: Exit Signal Received");
-            info!("Saving last known location to hard drive cache");
-        }).unwrap();
+        // ctrlc::set_handler(move || {
+        //     info!("IP Location Provider: Exit Signal Received");
+        //     info!("Saving last known location to hard drive cache");
+        // }).unwrap();
         Self
     }
 
@@ -95,8 +95,8 @@ impl LocationProvider for IpLocationProvider {
             Ok(location) => {
                 debug!("Lat: {}, Lon: {}", location.0, location.1);
                 Location {
-                    lon: location.0,
-                    lat: location.1,
+                    lat: location.0,
+                    lon: location.1,
                     last_updated: now,
                 }
             },

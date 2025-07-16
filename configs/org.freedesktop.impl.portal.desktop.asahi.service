@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.freedesktop.impl.portal.desktop.asahi
+Exec=/usr/lib/xdg-desktop-portal-asahi
+SystemdService=xdg-desktop-portal-asahi.service
