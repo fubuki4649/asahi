@@ -11,7 +11,6 @@
 ### DEPENDENCIES
 
 - xdg-desktop-portal
-- geoclue
 
 ### INSTALLATION (Manual)
 
