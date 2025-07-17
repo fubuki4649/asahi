@@ -16,11 +16,6 @@ impl PortalWrapper {
                 .serve_at("/org/freedesktop/portal/desktop", Portal::new())?
                 .build()?;
 
-        // Set dark mode to no preference before exiting
-        // ctrlc::set_handler(move || {
-        //     info!("Portal: Exit Signal Received");
-        // })?;
-
         Ok(Self { conn })
     }
 
