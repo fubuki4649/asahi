@@ -33,24 +33,6 @@ impl Portal {
 #[interface(name = "org.freedesktop.impl.portal.Settings")]
 impl Portal {
 
-    // /// Read method
-    // fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
-    //     let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
-    //     let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
-    //
-    //     Ok(OwnedValue::from(value.try_to_owned().unwrap()))
-    // }
-
-    // TODO: figure out if I need ReadOne or not
-
-    /// ReadOne method
-    fn read_one(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
-        let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
-        let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
-
-        Ok(value.try_to_owned().unwrap())
-    }
-
     /// Read method
     fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
         let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));

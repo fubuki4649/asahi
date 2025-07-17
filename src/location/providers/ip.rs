@@ -13,14 +13,6 @@ use std::time::SystemTime;
 pub struct IpLocationProvider;
 
 impl IpLocationProvider {
-    pub fn new() -> Self {
-        // Set dark mode to no preference before exiting
-        // ctrlc::set_handler(move || {
-        //     info!("IP Location Provider: Exit Signal Received");
-        //     info!("Saving last known location to hard drive cache");
-        // }).unwrap();
-        Self
-    }
 
     // Gets the location as (lat, lon)
     fn get_location_ip() -> Result<(f64, f64), Error> {

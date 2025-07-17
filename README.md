@@ -37,6 +37,5 @@ configuring the XDG Desktop Portal
 - [ ] Provide a makefile
 - [ ] Find a way to add our own config file
 - [ ] Find a firefox workaround
-- [ ] Ensure graceful exit (write proper exit hooks)
 - [ ] A CLI to pair the daemon with
 

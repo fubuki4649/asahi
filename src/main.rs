@@ -26,8 +26,6 @@ fn main() {
         },
     };
 
-    // TODO: Add ctrl-c handlers here
-
 
     loop {
         let now = Utc::now();
