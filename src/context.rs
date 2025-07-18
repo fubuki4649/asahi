@@ -11,6 +11,8 @@ pub struct Context {
     pub date: NaiveDate,
     pub sunrise: DateTime<Utc>,
     pub sunset: DateTime<Utc>,
+
+    pub manual_darkmode: i32,
 }
 
 impl Context {
@@ -21,6 +23,7 @@ impl Context {
             date: NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
             sunrise: Utc::now(),
             sunset: Utc::now(),
+            manual_darkmode: -1,
         }
     }
 

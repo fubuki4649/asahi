@@ -1,8 +1,9 @@
+use std::sync::{LazyLock, Mutex};
 use crate::config::SUNSET_CHECK_FREQUENCY;
 use crate::context::Context;
 use crate::dbus_portal::wrapper::PortalWrapper;
 use chrono::Utc;
-use log::{error, info};
+use log::{error, info, warn};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -12,12 +13,17 @@ mod location;
 mod _utils;
 mod config;
 
+
+static CONTEXT: LazyLock<Mutex<Context>> = LazyLock::new(|| {
+    Mutex::new(Context::new())
+});
+
+
 fn main() {
 
     simple_logger::init_with_level(log::Level::Debug).unwrap();
 
-    let mut ctx = Context::new();
-
+    // Initiate portal
     let portal = match PortalWrapper::new() {
         Ok(portal) => portal,
         Err(e) => {
@@ -26,8 +32,14 @@ fn main() {
         },
     };
 
+    // Set exit hook
+    ctrlc::set_handler(move || {
+        std::process::exit(0);
+    }).unwrap_or_else(|e| warn!("Failed to set exit hook: {}", e));
+
 
     loop {
+        let mut ctx = CONTEXT.lock().unwrap();
         let now = Utc::now();
 
         // Update location/sunrise/sunset times
@@ -46,6 +58,7 @@ fn main() {
             info!("Set Dark Mode!");
         }
 
+        drop(ctx);
         sleep(Duration::from_secs(SUNSET_CHECK_FREQUENCY));
     }
     

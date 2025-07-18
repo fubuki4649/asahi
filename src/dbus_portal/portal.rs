@@ -1,5 +1,5 @@
 //! # D-Bus portal definition for: `org.freedesktop.impl.portal.Settings`
-use crate::unwrap_or_return;
+use crate::{unwrap_or_return, CONTEXT};
 use log::debug;
 use std::collections::HashMap;
 use zbus::fdo::Error::UnknownProperty;
@@ -9,7 +9,7 @@ use zbus::zvariant::{OwnedValue, Value};
 
 pub struct Portal {
     /// Hashmap<Namespace, Hashmap<Key, Value>>
-    pub values: HashMap<String, HashMap<String, OwnedValue>>
+    values: HashMap<String, HashMap<String, OwnedValue>>
 }
 
 
