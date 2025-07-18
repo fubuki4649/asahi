@@ -30,6 +30,9 @@
 
 For help identifying the active config file, read the XDG Desktop Portal docs [here](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html#description)
 
+Alternatively, use `scripts/set-portal-config.sh` to automatically perform this step.
+
+
 4. Finally, restart `xdg-desktop-portal`
 
 
