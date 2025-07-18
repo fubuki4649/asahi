@@ -3,6 +3,7 @@ use anyhow::Error;
 use zbus::block_on;
 use zbus::blocking::{connection, Connection};
 use zbus::zvariant::Value::U32;
+use crate::dbus_portal::control::Control;
 
 pub struct PortalWrapper {
     conn: Connection,
@@ -14,6 +15,7 @@ impl PortalWrapper {
         let conn = connection::Builder::session()?
                 .name("org.freedesktop.impl.portal.desktop.asahi")?
                 .serve_at("/org/freedesktop/portal/desktop", Portal::new())?
+                .serve_at("/org/freedesktop/portal/desktop", Control::new())?
                 .build()?;
 
         Ok(Self { conn })
