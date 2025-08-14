@@ -1,9 +1,9 @@
-use std::sync::{LazyLock, Mutex};
 use crate::config::SUNSET_CHECK_FREQUENCY;
 use crate::context::Context;
 use crate::dbus_portal::wrapper::PortalWrapper;
 use chrono::Utc;
-use log::{error, info, warn};
+use log::{error, warn};
+use std::sync::{LazyLock, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -46,16 +46,17 @@ fn main() {
         ctx.update_location();
         ctx.update_sunrise();
 
-        // Check for sunset/sunrise
-        // Send light mode (2) signal if its daytime
-        if ctx.sunrise <= now && now < ctx.sunset {
-            portal.set_darkmode(2);
-            info!("Set Light Mode!");
-        }
-        // Otherwise, set dark mode (1) signal
-        else {
-            portal.set_darkmode(1);
-            info!("Set Dark Mode!");
+
+        // Check for sunset/sunrise if manual darkmode isn't set
+        if ctx.manual_darkmode == -1 {
+            // Send light mode (2) signal if its daytime
+            if ctx.sunrise <= now && now < ctx.sunset {
+                portal.set_darkmode(2);
+            }
+            // Otherwise, set dark mode (1) signal
+            else {
+                portal.set_darkmode(1);
+            }
         }
 
         drop(ctx);
