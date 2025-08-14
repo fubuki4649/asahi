@@ -7,13 +7,13 @@ use zbus::interface;
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedValue, Value};
 
-pub struct Portal {
+pub struct XDGInterfaces {
     /// Hashmap<Namespace, Hashmap<Key, Value>>
     values: HashMap<String, HashMap<String, OwnedValue>>
 }
 
 
-impl Portal {
+impl XDGInterfaces {
     pub fn new() -> Self {
         Self {
             values: HashMap::from([("org.freedesktop.appearance".to_string(), HashMap::from(
@@ -31,7 +31,7 @@ impl Portal {
 }
 
 #[interface(name = "org.freedesktop.impl.portal.Settings")]
-impl Portal {
+impl XDGInterfaces {
 
     /// Read method
     fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
