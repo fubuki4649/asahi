@@ -50,5 +50,25 @@ impl Context {
             self.update_sunrise();
         }
     }
+
+    pub fn calculate_dark_mode(&mut self) -> u32 {
+        if self.manual_darkmode == -1 {
+            // Update location/sunrise/sunset times first
+            self.update_location();
+            self.update_sunrise();
+            let now = Utc::now();
+
+            // Send light mode (2) signal if its daytime
+            return if self.sunrise <= now && now < self.sunset {
+                2
+            }
+            // Otherwise, set dark mode (1) signal
+            else {
+                1
+            }
+        }
+
+        self.manual_darkmode as u32
+    }
     
 }

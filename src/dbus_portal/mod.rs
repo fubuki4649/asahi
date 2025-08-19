@@ -1,3 +1,3 @@
-pub mod xdg_interfaces;
-pub mod wrapper;
-pub mod control;
+mod xdg_interfaces;
+mod control;
+pub mod portal_connection;

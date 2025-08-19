@@ -1,16 +1,26 @@
+use std::ops::Deref;
+use crate::dbus_portal::control::Control;
 use crate::dbus_portal::xdg_interfaces::XDGInterfaces;
 use anyhow::Error;
 use log::info;
 use zbus::block_on;
 use zbus::blocking::{connection, Connection};
 use zbus::zvariant::Value::U32;
-use crate::dbus_portal::control::Control;
 
-pub struct PortalWrapper {
-    conn: Connection,
+
+pub struct PortalConnection(Connection);
+
+impl Deref for PortalConnection {
+    type Target = Connection;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
-impl PortalWrapper {
+
+impl PortalConnection {
+
     pub fn new() -> Result<Self, Error> {
         // Initialize a DBus connection
         let conn = connection::Builder::session()?
@@ -19,7 +29,7 @@ impl PortalWrapper {
                 .serve_at("/org/freedesktop/portal/desktop", Control::new())?
                 .build()?;
 
-        Ok(Self { conn })
+        Ok(Self(conn))
     }
 
     /// 0 - No Preference
@@ -27,8 +37,8 @@ impl PortalWrapper {
     /// 1 - Dark Mode
     ///
     /// 2 - Light Mode
-    pub fn set_darkmode(&self, value: u32) {
-        let iref = self.conn.object_server()
+    pub fn broadcast_darkmode(&self, value: u32) {
+        let iref = self.object_server()
             .interface::<_, XDGInterfaces>("/org/freedesktop/portal/desktop")
             .expect("Interface not found at path");
 
