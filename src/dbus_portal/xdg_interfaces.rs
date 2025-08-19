@@ -1,5 +1,5 @@
 //! # D-Bus portal definition for: `org.freedesktop.impl.portal.Settings`
-use crate::{unwrap_or_return, CONTEXT};
+use crate::unwrap_or_return;
 use log::debug;
 use std::collections::HashMap;
 use zbus::fdo::Error::UnknownProperty;

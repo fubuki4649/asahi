@@ -1,5 +1,5 @@
 use zbus::interface;
-use crate::CONTEXT;
+use crate::{CONTEXT, PORTAL};
 
 pub struct Control {
 
@@ -20,8 +20,15 @@ impl Control {
     /// 1 = Dark Mode
     /// 2 = Light Mode
     fn set_manual_darkmode(&self, code: i32) {
+        // Store dark mode setting
         let mut ctx = CONTEXT.lock().unwrap();
         ctx.manual_darkmode = code;
+
+        // Broadcast signal
+        let conn = PORTAL.lock().unwrap();
+        conn.broadcast_darkmode(ctx.calculate_dark_mode());
+
+        drop(conn);
         drop(ctx);
     }
 
