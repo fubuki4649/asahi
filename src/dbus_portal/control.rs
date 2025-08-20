@@ -19,6 +19,7 @@ impl Control {
     /// 0 = No Preference
     /// 1 = Dark Mode
     /// 2 = Light Mode
+    #[zbus(name = "setManualDarkMode")]
     fn set_manual_darkmode(&self, code: i32) {
         // Store dark mode setting
         let mut ctx = CONTEXT.lock().unwrap();
@@ -33,7 +34,7 @@ impl Control {
     }
 
     /// Allow querying of current manual control setting as a property
-    #[zbus(property, name = "manualDarkmodeSetting")]
+    #[zbus(property, name = "manualDarkModeSetting")]
     fn current_darkmode_setting(&self) -> i32 {
         let ctx = CONTEXT.lock().unwrap();
         let current_setting = ctx.manual_darkmode;

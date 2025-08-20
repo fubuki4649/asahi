@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# asahictl - CLI tool for managing system settings
+# Usage: asahictl [setting] [value]
+
+SCRIPT_NAME="asahictl"
+VERSION="1.0.0"
+
+# Function to display help information
+show_help() {
+    cat << EOF
+$SCRIPT_NAME - System Dark Mode CLI Utility
+
+USAGE:
+    $SCRIPT_NAME [setting] [value]
+
+SETTINGS:
+    set-darkmode [value]          Set dark mode preference
+                                  Values: on, off, auto
+
+EXAMPLES:
+    $SCRIPT_NAME set-darkmode nopref  Do not set a system preference
+    $SCRIPT_NAME set-darkmode on      Enable dark mode
+    $SCRIPT_NAME set-darkmode off     Disable dark mode
+    $SCRIPT_NAME set-darkmode auto    Determine automatically using location and system time [default]
+
+OPTIONS:
+  -h, --help                      Show this help message
+  -v, --version                   Show version information
+
+EOF
+}
+
+# Function to display version
+show_version() {
+    echo "$SCRIPT_NAME version $VERSION"
+}
+
+
+# Placeholder function for set-darkmode
+set_darkmode() {
+    local value="$1"
+
+    case "$value" in
+        "nopref"|"on"|"off"|"auto")
+            echo "Setting dark mode to: $value"
+
+            case "$value" in
+                "nopref")
+                    dbus-send --session --dest=org.freedesktop.impl.portal.desktop.asahi \
+                        --type=method_call /org/freedesktop/portal/desktop \
+                        org.freedesktop.impl.portal.asahi.Control.setManualDarkMode \
+                        int32:0
+                    ;;
+                "on")
+                    dbus-send --session --dest=org.freedesktop.impl.portal.desktop.asahi \
+                        --type=method_call /org/freedesktop/portal/desktop \
+                        org.freedesktop.impl.portal.asahi.Control.setManualDarkMode \
+                        int32:1
+                    ;;
+                "off")
+                    dbus-send --session --dest=org.freedesktop.impl.portal.desktop.asahi \
+                        --type=method_call /org/freedesktop/portal/desktop \
+                        org.freedesktop.impl.portal.asahi.Control.setManualDarkMode \
+                        int32:2
+                    ;;
+                "auto")
+                    dbus-send --session --dest=org.freedesktop.impl.portal.desktop.asahi \
+                        --type=method_call /org/freedesktop/portal/desktop \
+                        org.freedesktop.impl.portal.asahi.Control.setManualDarkMode \
+                        int32:-1
+                    ;;
+            esac
+
+            echo "Dark mode successfully set to $value"
+            ;;
+        "")
+            echo "Error: set-darkmode requires a value (nopref, on, off, auto)" >&2
+            return 1
+            ;;
+        *)
+            echo "Error: Invalid value '$value' for set-darkmode. Valid values are: nopref, on, off, auto" >&2
+            return 1
+            ;;
+    esac
+}
+
+# Main logic
+main() {
+    # Handle special flags first
+    case "$1" in
+        "-h"|"--help"|"help")
+            show_help
+            exit 0
+            ;;
+        "-v"|"--version"|"version")
+            show_version
+            exit 0
+            ;;
+    esac
+
+    # Handle settings commands
+    case "$1" in
+        "set-darkmode")
+            set_darkmode "$2"
+            exit $?
+            ;;
+        "")
+            # No arguments provided - show help
+            echo "Error: No setting specified" >&2
+            echo
+            show_help
+            exit 1
+            ;;
+        *)
+            # Unknown setting - show help
+            echo "Error: Unknown setting '$1'" >&2
+            echo
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"
