@@ -11,6 +11,7 @@
 ### DEPENDENCIES
 
 - xdg-desktop-portal
+- dbus-send (for asahictl)
 
 ### INSTALLATION (Manual)
 
@@ -45,5 +46,4 @@ configuring the XDG Desktop Portal
 ### TODO
 - [ ] Provide a makefile
 - [ ] Find a firefox workaround
-- [ ] A CLI to pair the daemon with
 
