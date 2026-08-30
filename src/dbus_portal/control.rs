@@ -1,4 +1,5 @@
 use zbus::interface;
+use crate::_utils::mutex_ext::MutexExt;
 use crate::{CONTEXT, PORTAL};
 
 pub struct Control {
@@ -22,11 +23,11 @@ impl Control {
     #[zbus(name = "setManualDarkMode")]
     fn set_manual_darkmode(&self, code: i32) {
         // Store dark mode setting
-        let mut ctx = CONTEXT.lock().unwrap();
+        let mut ctx = CONTEXT.lock_recover();
         ctx.manual_darkmode = code;
 
         // Broadcast signal
-        let conn = PORTAL.lock().unwrap();
+        let conn = PORTAL.lock_recover();
         conn.broadcast_darkmode(ctx.calculate_dark_mode());
 
         drop(conn);
@@ -36,7 +37,7 @@ impl Control {
     /// Allow querying of current manual control setting as a property
     #[zbus(property, name = "manualDarkModeSetting")]
     fn current_darkmode_setting(&self) -> i32 {
-        let ctx = CONTEXT.lock().unwrap();
+        let ctx = CONTEXT.lock_recover();
         let current_setting = ctx.manual_darkmode;
         drop(ctx);
         current_setting

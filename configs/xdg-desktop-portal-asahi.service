@@ -10,3 +10,6 @@ BusName=org.freedesktop.impl.portal.desktop.asahi
 ExecStart=/usr/lib/xdg-desktop-portal-asahi
 Restart=on-failure
 Slice=session.slice
+
+[Install]
+WantedBy=graphical-session.target

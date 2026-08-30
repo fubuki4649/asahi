@@ -1,4 +1,4 @@
-use crate::location::location::Location;
+use crate::location::model::Location;
 use crate::location::provider_trait::LocationProvider;
 use anyhow::{anyhow, Error};
 use log::{debug, info, warn};
@@ -28,12 +28,12 @@ impl IpLocationProvider {
 
         // parse lat
         let lat_str = &response[lat_idx..];
-        let lat_end = lat_str.find(|c: char| !c.is_digit(10) && c != '.' && c != '-').unwrap_or(lat_str.len());
+        let lat_end = lat_str.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-').unwrap_or(lat_str.len());
         let lat: f64 = lat_str[..lat_end].parse()?;
 
         // parse lon
         let lon_str = &response[lon_idx..];
-        let lon_end = lon_str.find(|c: char| !c.is_digit(10) && c != '.' && c != '-').unwrap_or(lon_str.len());
+        let lon_end = lon_str.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-').unwrap_or(lon_str.len());
         let lon: f64 = lon_str[..lon_end].parse()?;
 
         Ok((lat, lon))
@@ -55,7 +55,7 @@ impl IpLocationProvider {
         let lat_line = lines.next().ok_or(anyhow!("Malformed Cache: Missing Latitude"))??;
         let lon_line = lines.next().ok_or(anyhow!("Malformed Cache: Missing Longitude"))??;
 
-        Ok((lon_line.trim().parse()?, lat_line.trim().parse()?))
+        Ok((lat_line.trim().parse()?, lon_line.trim().parse()?))
     }
 
     // Write to the local location cache
@@ -93,26 +93,30 @@ impl LocationProvider for IpLocationProvider {
                 }
             },
             // Otherwise, try reading the cached location
-            Err(_) => {
-                info!("Unable to get fresh location, using cached value");
-                
+            Err(e) => {
+                warn!("Failed to get fresh location via IP: {}", e);
+                info!("Falling back to cached location");
+
                 match Self::get_location_cache() {
                     Ok(location) => {
                         debug!("Lat: {}, Lon: {}", location.0, location.1);
                         Location {
                             lat: location.0,
                             lon: location.1,
-                            last_updated: now,
+                            // Use UNIX_EPOCH so this is immediately considered stale;
+                            // the next cycle will retry the IP lookup rather than
+                            // treating stale cached data as fresh for a full TTL.
+                            last_updated: SystemTime::UNIX_EPOCH,
                         }
                     },
                     // Last resort, assume we are at Toronto Union Station
                     Err(_) => {
                         info!("Unable to read cached location, assuming Toronto Union Station");
-                        
+
                         Location {
                             lat: 43.644444,
                             lon: -79.374722,
-                            last_updated: now,
+                            last_updated: SystemTime::UNIX_EPOCH,
                         }
                     }
                 }

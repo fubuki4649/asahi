@@ -1,5 +1,5 @@
 use crate::config::SelectedLocationProvider;
-use crate::location::location::Location;
+use crate::location::model::Location;
 use crate::location::provider_trait::LocationProvider;
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use log::{debug, info};
@@ -15,16 +15,22 @@ pub struct Context {
     pub manual_darkmode: i32,
 }
 
-impl Context {
-    
-    pub fn new() -> Self {
+impl Default for Context {
+    fn default() -> Self {
         Self {
-            location: Location::new(),
+            location: Location::default(),
             date: NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
             sunrise: Utc::now(),
             sunset: Utc::now(),
             manual_darkmode: -1,
         }
+    }
+}
+
+impl Context {
+
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Recalculates the sunrise/sunset times if out of date
@@ -45,7 +51,7 @@ impl Context {
 
     /// Recalculates location data if out of date
     pub fn update_location(&mut self) {
-        if self.location.validate() == false {
+        if !self.location.validate() {
             self.location = SelectedLocationProvider::get_location();
             self.update_sunrise();
         }
@@ -53,7 +59,9 @@ impl Context {
 
     pub fn calculate_dark_mode(&mut self) -> u32 {
         if self.manual_darkmode == -1 {
-            // Update location/sunrise/sunset times first
+            // Update location/sunrise/sunset times first.
+            // Note: update_location() already calls update_sunrise() when location changes,
+            // but we call it here too in case the date changed without the location expiring.
             self.update_location();
             self.update_sunrise();
             let now = Utc::now();
@@ -70,5 +78,5 @@ impl Context {
 
         self.manual_darkmode as u32
     }
-    
+
 }

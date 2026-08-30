@@ -1,4 +1,4 @@
-use crate::location::location::Location;
+use crate::location::model::Location;
 
 pub trait LocationProvider {
     /// Attempts to get new location data

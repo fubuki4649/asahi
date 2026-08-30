@@ -1,6 +1,8 @@
-use crate::config::SUNSET_CHECK_FREQUENCY;
+use crate::_utils::mutex_ext::MutexExt;
+use crate::config::{SelectedLocationProvider, SUNSET_CHECK_FREQUENCY};
 use crate::context::Context;
 use crate::dbus_portal::portal_connection::PortalConnection;
+use crate::location::provider_trait::LocationProvider;
 use log::warn;
 use std::sync::{LazyLock, Mutex};
 use std::thread::sleep;
@@ -27,8 +29,13 @@ fn main() {
 
     // Set exit hook
     ctrlc::set_handler(move || {
+        // Persist the last known location to the cache before exiting
+        let ctx = CONTEXT.lock_recover();
+        SelectedLocationProvider::on_daemon_close(ctx.location);
+        drop(ctx);
+
         // Broadcast dark mode = unset before exiting
-        let portal = PORTAL.lock().unwrap();
+        let portal = PORTAL.lock_recover();
         portal.broadcast_darkmode(0);
         drop(portal);
 
@@ -38,17 +45,18 @@ fn main() {
 
 
     loop {
-        let mut ctx = CONTEXT.lock().unwrap();
+        {
+            let mut ctx = CONTEXT.lock_recover();
 
-        // Check for sunset/sunrise if manual darkmode isn't set
-        if ctx.manual_darkmode == -1 {
-            let portal = PORTAL.lock().unwrap();
-            portal.broadcast_darkmode(ctx.calculate_dark_mode());
-
-            drop(portal);
+            // Check for sunset/sunrise if manual darkmode isn't set
+            if ctx.manual_darkmode == -1 {
+                let portal = PORTAL.lock_recover();
+                portal.broadcast_darkmode(ctx.calculate_dark_mode());
+                // portal is dropped here
+            }
+            // ctx is dropped here, before the sleep
         }
 
-        drop(ctx);
         sleep(Duration::from_secs(SUNSET_CHECK_FREQUENCY));
     }
     
