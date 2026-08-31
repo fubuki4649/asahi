@@ -1,12 +1,7 @@
 use crate::location::model::Location;
-use crate::location::provider_trait::LocationProvider;
+use crate::location::providers::provider_trait::LocationProvider;
 use anyhow::{anyhow, Error};
-use log::{debug, info, warn};
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use log::{debug, warn};
 use std::time::SystemTime;
 
 
@@ -16,7 +11,7 @@ impl IpLocationProvider {
 
     // Gets the location as (lat, lon)
     fn get_location_ip() -> Result<(f64, f64), Error> {
-        let r = minreq::get("http://ip-api.com/json").send()?;
+        let r = minreq::get("https://ip-api.com/json").send()?;
         let response = r.as_str()?;
 
         // Very naive parsing; uses JSON keys to extract values
@@ -38,95 +33,30 @@ impl IpLocationProvider {
 
         Ok((lat, lon))
     }
-
-    // Gets the last known location from local cache as (lat, lon)
-    fn get_location_cache() -> Result<(f64, f64), Error> {
-        // Build the path to ~/.cache/asahi-location-cache
-        let mut path = PathBuf::from(env::var("HOME")?);
-        path.push(".cache");
-        path.push("asahi-location-cache");
-
-        // Open the file
-        let file = File::open(&path)?;
-        let reader = BufReader::new(file);
-
-        // Read lines and parse floats
-        let mut lines = reader.lines();
-        let lat_line = lines.next().ok_or(anyhow!("Malformed Cache: Missing Latitude"))??;
-        let lon_line = lines.next().ok_or(anyhow!("Malformed Cache: Missing Longitude"))??;
-
-        Ok((lat_line.trim().parse()?, lon_line.trim().parse()?))
-    }
-
-    // Write to the local location cache
-    fn save_location_cache(lat: f64, lon: f64) -> Result<(), Error> {
-        // Build the path to ~/.cache/asahi-location-cache
-        let mut path = PathBuf::from(env::var("HOME")?);
-        path.push(".cache");
-        path.push("asahi-location-cache");
-
-        // Ensure parent directory exists
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        // Open file for writing (truncates)
-        let mut file = File::create(&path)?;
-        writeln!(&mut file, "{lat}")?;
-        writeln!(&mut file, "{lon}")?;
-        Ok(())
-    }
 }
 
 impl LocationProvider for IpLocationProvider {
-    fn get_location() -> Location {
+    fn get_location(&self) -> Result<Location, Error> {
         let now = SystemTime::now();
 
-        // Try IP location first
         match Self::get_location_ip() {
             Ok(location) => {
-                debug!("Lat: {}, Lon: {}", location.0, location.1);
-                Location {
+                debug!("Location acquired by IP: Lat: {}, Lon: {}", location.0, location.1);
+                Ok(Location {
                     lat: location.0,
                     lon: location.1,
                     last_updated: now,
-                }
+                })
             },
             // Otherwise, try reading the cached location
             Err(e) => {
                 warn!("Failed to get fresh location via IP: {}", e);
-                info!("Falling back to cached location");
-
-                match Self::get_location_cache() {
-                    Ok(location) => {
-                        debug!("Lat: {}, Lon: {}", location.0, location.1);
-                        Location {
-                            lat: location.0,
-                            lon: location.1,
-                            // Use UNIX_EPOCH so this is immediately considered stale;
-                            // the next cycle will retry the IP lookup rather than
-                            // treating stale cached data as fresh for a full TTL.
-                            last_updated: SystemTime::UNIX_EPOCH,
-                        }
-                    },
-                    // Last resort, assume we are at Toronto Union Station
-                    Err(_) => {
-                        info!("Unable to read cached location, assuming Toronto Union Station");
-
-                        Location {
-                            lat: 43.644444,
-                            lon: -79.374722,
-                            last_updated: SystemTime::UNIX_EPOCH,
-                        }
-                    }
-                }
+                Err(e)
             }
         }
     }
 
-    fn on_daemon_close(location: Location) {
-        if let Err(e) = Self::save_location_cache(location.lat, location.lon) {
-            warn!("Failed to write location cache: {}", e);
-        }
+    fn on_cleanup(&self) {
+        // Nothing to implement here
     }
 }

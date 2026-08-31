@@ -1,12 +1,14 @@
-use crate::config::SelectedLocationProvider;
+use crate::config::build_location_provider;
 use crate::location::model::Location;
-use crate::location::provider_trait::LocationProvider;
+use crate::location::providers::provider_trait::LocationProvider;
+use crate::location::providers::wrapper::LocationProviderWrapper;
 use chrono::{DateTime, Local, NaiveDate, Utc};
-use log::{debug, info};
+use log::{debug, info, warn};
 use sunrise::{SolarDay, SolarEvent};
 
 pub struct Context {
     pub location: Location,
+    pub location_provider: LocationProviderWrapper,
 
     pub date: NaiveDate,
     pub sunrise: DateTime<Utc>,
@@ -19,6 +21,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             location: Location::default(),
+            location_provider: build_location_provider(),
             date: NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
             sunrise: Utc::now(),
             sunset: Utc::now(),
@@ -52,8 +55,13 @@ impl Context {
     /// Recalculates location data if out of date
     pub fn update_location(&mut self) {
         if !self.location.validate() {
-            self.location = SelectedLocationProvider::get_location();
-            self.update_sunrise();
+            match self.location_provider.get_location() {
+                Ok(location) => {
+                    self.location = location;
+                    self.update_sunrise();
+                }
+                Err(e) => warn!("Failed to update location, retaining last known location: {e}"),
+            }
         }
     }
 

@@ -1,8 +1,8 @@
 use crate::_utils::mutex_ext::MutexExt;
-use crate::config::{SelectedLocationProvider, SUNSET_CHECK_FREQUENCY};
+use crate::config::SUNSET_CHECK_FREQUENCY;
 use crate::context::Context;
 use crate::dbus_portal::portal_connection::PortalConnection;
-use crate::location::provider_trait::LocationProvider;
+use location::providers::provider_trait::LocationProvider;
 use log::warn;
 use std::sync::{LazyLock, Mutex};
 use std::thread::sleep;
@@ -31,7 +31,7 @@ fn main() {
     ctrlc::set_handler(move || {
         // Persist the last known location to the cache before exiting
         let ctx = CONTEXT.lock_recover();
-        SelectedLocationProvider::on_daemon_close(ctx.location);
+        ctx.location_provider.on_cleanup();
         drop(ctx);
 
         // Broadcast dark mode = unset before exiting
