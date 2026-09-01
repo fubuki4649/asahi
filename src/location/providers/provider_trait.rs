@@ -5,7 +5,7 @@ use anyhow::Error;
 ///
 /// Implementations are tried at runtime by [`LocationProviderProxy`](crate::location::providers::wrapper::LocationProviderWrapper),
 /// which allows the daemon to fall through multiple providers (e.g. IP-based
-/// geolocation, a cached location, GeoClue, a manual override, ...) instead
+/// geolocation, a cached location, `GeoClue`, a manual override, ...) instead
 /// of being locked into a single, compile-time-selected provider.
 pub trait LocationProvider {
     /// Attempts to get new location data. Returns an error if this provider

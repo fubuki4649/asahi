@@ -43,6 +43,6 @@ impl PortalConnection {
             .expect("Interface not found at path");
 
         block_on(iref.get_mut().change_setting(iref.signal_emitter(), "org.freedesktop.appearance", "color-scheme", U32(value)));
-        info!("Set darkmode to {}!", value);
+        info!("Set darkmode to {value}!");
     }
 }

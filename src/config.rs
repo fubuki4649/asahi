@@ -1,22 +1,41 @@
-use crate::location::providers::ip::IpLocationProvider;
-use crate::location::providers::provider_trait::LocationProvider;
-use crate::location::providers::wrapper::LocationProviderWrapper;
+use log::warn;
+use std::env;
+use std::fs;
+use std::path::PathBuf;
 
-/// Builds the location provider used by the daemon.
+/// Loads and merges config from two locations:
+///   1. `/etc/asahi/config.toml` - system-wide default
+///   2. `~/.config/asahi/config.toml` — user-local overrides (takes priority)
 ///
-/// This returns a [`LocationProviderWrapper`] configured with every available
-/// [`LocationProvider`], tried in order until one succeeds. Adding a new
-/// location source only requires implementing [`LocationProvider`] and
-/// adding it to the list below; no other call sites need to change.
-pub fn build_location_provider() -> LocationProviderWrapper {
-    let providers: Vec<Box<dyn LocationProvider + Send + Sync>> = vec![Box::new(IpLocationProvider)];
-    LocationProviderWrapper::new(providers)
+/// Where keys present in both files, the config in ~/.config takes priority.
+/// If either file is missing or unparseable it is silently skipped,
+/// so neither is required to exist.
+pub fn load_config() -> toml::Table {
+    let system = load_file(&PathBuf::from("/etc/asahi/config.toml"));
+    let local = load_file(&local_config_path());
+
+    // Start with system-wide values, then overlay the local ones on top.
+    system.into_iter().chain(local).collect()
 }
 
-/// The period of time for which the location data is valid for (in seconds)
-// 3600 seconds = 1 hour
-pub const LOCATION_TTL: u64 = 3600;
+/// Resolves the user-local config path
+fn local_config_path() -> PathBuf {
+    PathBuf::from(env::var("HOME").unwrap_or_default())
+        .join(".config/asahi/config.toml")
+}
 
-/// How often to check for sunset
-// 600 seconds = 10 minutes
-pub const SUNSET_CHECK_FREQUENCY: u64 = 600;
+/// Reads a single TOML file and parses it into a [`toml::Table`].
+/// Returns an empty table if the file does not exist or cannot be parsed.
+fn load_file(path: &PathBuf) -> toml::Table {
+    match fs::read_to_string(path) {
+        Ok(content) => match toml::from_str(&content) {
+            Ok(table) => table,
+            Err(e) => {
+                warn!("Failed to parse config file {}: {e}", path.display());
+                toml::Table::new()
+            }
+        },
+        // Missing file is not an error - just use defaults.
+        Err(_) => toml::Table::new(),
+    }
+}

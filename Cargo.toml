@@ -6,6 +6,7 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 anyhow = { version = "1.0.98", default-features = false }
 minreq = { version = "2.14.0", default-features = false }
 log = "0.4.27"

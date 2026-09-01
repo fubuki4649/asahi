@@ -43,7 +43,30 @@ Alternatively, use `scripts/set-portal-config.sh` to automatically perform this 
 See the [Arch Wiki](https://wiki.archlinux.org/title/XDG_Desktop_Portal#Configuration) for more information on
 configuring the XDG Desktop Portal
 
+
+### CONFIGURATION
+
+`asahi` reads configuration from two locations, merged at startup; the user-local file takes priority over the system-wide one:
+
+| Scope       | Path                             |
+|-------------|----------------------------------|
+| System-wide | `/etc/asahi/config.toml`         |
+| User-local  | `~/.config/asahi/config.toml`    |
+
+Both files are optional. A sample config with all available keys and their defaults is provided at [`configs/config.toml`](configs/config.toml).
+
+| Key                      | Default | Description                                                                     |
+|--------------------------|---------|---------------------------------------------------------------------------------|
+| `log_level`              | `info`  | Log verbosity (`error` `warn` `info` `debug` `trace`)                           |
+| `override_lat`           | (off)   | (Optional) Override auto geolocation (must be set together with `override_lon`) |
+| `override_lon`           | (off)   | (Optional) Override auto geolocation (must be set together with `override_lat`) |
+| `location_ttl`           | `3600`  | Seconds before a location fix is refreshed                                      |
+| `sunset_check_frequency` | `600`   | Seconds between sunrise/sunset checks                                           |
+| `sunrise_offset`         | `0`     | Minutes to shift the light-mode trigger (± relative to sunrise)                 |
+| `sunset_offset`          | `0`     | Minutes to shift the dark-mode trigger (± relative to sunset)                   |
+
 ### TODO
+
 - [ ] Provide a makefile
 - [ ] Find a firefox workaround
 

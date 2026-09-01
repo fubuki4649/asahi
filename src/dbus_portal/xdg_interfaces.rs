@@ -41,12 +41,13 @@ impl XDGInterfaces {
         Ok(value.try_to_owned().unwrap())
     }
 
-    /// ReadAll method
+    /// `ReadAll` method
+    #[allow(clippy::needless_pass_by_value)]
     fn read_all(&self, namespaces: Box<[&str]>) -> HashMap<&str, &HashMap<String, OwnedValue>> {
 
         let mut results: HashMap<&str, &HashMap<String, OwnedValue>> = HashMap::new();
 
-        for ns in self.values.iter() {
+        for ns in &self.values {
             // If namespace matches, insert into results
             if glob(&namespaces, ns.0) {
                 results.insert(ns.0, ns.1);
@@ -56,18 +57,19 @@ impl XDGInterfaces {
         results
     }
 
-    /// SettingChanged signal
+    /// `SettingChanged` signal
     #[zbus(signal)]
     async fn setting_changed(emitter: &SignalEmitter<'_>, namespace: &str, key: &str, value: Value<'_>) -> zbus::Result<()>;
 
     /// version property
     #[zbus(property, name = "version")]
+    #[allow(clippy::unused_self)]
     fn version(&self) -> u32 { 0 }
 
 }
 
 
-/// Matching helper for ReadAll.
+/// Matching helper for `ReadAll`.
 ///
 /// Per the XDG Desktop Portal Settings spec, a namespace filter matches if:
 /// - The patterns array itself is empty (match all)
@@ -81,11 +83,11 @@ fn glob(patterns: &[&str], namespace: &str) -> bool {
     }
 
     let mut ret = false;
-    patterns.iter().for_each(|&pattern| {
+    for &pattern in patterns {
         ret |= pattern.is_empty();
         ret |= pattern == namespace;
         ret |= pattern.ends_with('*') && namespace.starts_with(pattern.trim_end_matches('*'));
-    });
+    }
     ret
 }
 

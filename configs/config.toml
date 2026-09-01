@@ -1,0 +1,46 @@
+# asahi — sample configuration
+#
+# Configuration is loaded from two locations (local takes priority):
+#   System-wide : /etc/asahi/config.toml
+#   User-local  : ~/.config/asahi/config.toml
+#
+# All keys are optional. Omitting a key uses the default value shown below.
+# Copy this file to either location and uncomment the keys you want to change.
+
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+
+# Verbosity of the daemon log output.
+# Accepted values: "error" | "warn" | "info" | "debug" | "trace"
+# log_level = "info"
+
+
+# ── Location ─────────────────────────────────────────────────────────────────
+
+# By default the daemon determines your location via IP geolocation.
+# Set both keys below to override with a fixed position instead.
+# When set, IP geolocation is skipped entirely.
+#
+# override_lat = 43.645
+# override_lon = -79.381
+
+# How long a location fix is considered valid before being refreshed (seconds).
+# location_ttl = 3600
+
+
+# ── Sunrise / Sunset ─────────────────────────────────────────────────────────
+
+# How often the daemon checks whether the mode should change (seconds).
+# sunset_check_frequency = 600
+
+# Shift the point at which "daytime" begins, relative to true astronomical
+# sunrise. Negative values make the switch happen earlier; positive = later.
+# Units: minutes.
+#
+# sunrise_offset = 0
+
+# Shift the point at which "daytime" ends, relative to true astronomical
+# sunset. Negative values make the switch happen earlier; positive = later.
+# Units: minutes.
+#
+# sunset_offset = 0

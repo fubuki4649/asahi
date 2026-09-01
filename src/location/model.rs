@@ -1,4 +1,3 @@
-use crate::config::LOCATION_TTL;
 use anyhow::{anyhow, Error};
 use std::env;
 use std::fs::File;
@@ -46,19 +45,19 @@ impl From<&Location> for Coordinates {
 impl Location {
     /// Checks if the current location is still valid (based off the timestamp).
     /// Returns false if the location data is expired or if the clock has skewed backwards.
-    pub fn validate(&self) -> bool {
+    pub fn validate(&self, ttl: u64) -> bool {
         let elapsed = SystemTime::now()
             .duration_since(self.last_updated)
             .unwrap_or_default()
             .as_secs();
-        LOCATION_TTL >= elapsed
+        ttl >= elapsed
     }
 
     pub fn from_cache() -> Result<Self, Error> {
         // Build the path to ~/.cache/asahi-location-cache
-        let mut path = PathBuf::from(env::var("HOME")?);
-        path.push(".cache");
-        path.push("asahi-location-cache");
+        let path = PathBuf::from(env::var("HOME")?)
+            .join(".cache")
+            .join("asahi-location-cache");
 
         // Open the file
         let file = File::open(&path)?;
@@ -69,7 +68,7 @@ impl Location {
         let lat = lines.next().ok_or(anyhow!("Malformed Cache: Missing Latitude"))??.trim().parse()?;
         let lon = lines.next().ok_or(anyhow!("Malformed Cache: Missing Longitude"))??.trim().parse()?;
         let last_updated = lines.next()
-            .and_then(|res| res.ok())
+            .and_then(std::result::Result::ok)
             .and_then(|s| s.trim().parse::<u64>().ok())
             .unwrap_or(0);
 
@@ -82,9 +81,9 @@ impl Location {
 
     pub fn to_cache(self) -> Result<(), Error> {
         // Build the path to ~/.cache/asahi-location-cache
-        let mut path = PathBuf::from(env::var("HOME")?);
-        path.push(".cache");
-        path.push("asahi-location-cache");
+        let path = PathBuf::from(env::var("HOME")?)
+            .join(".cache")
+            .join("asahi-location-cache");
 
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
@@ -98,7 +97,7 @@ impl Location {
 
         // `last_updated` as a UNIX timestamp
         let last_updated = self.last_updated.duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).as_secs();
-        writeln!(&mut file, "{:?}", last_updated)?;
+        writeln!(&mut file, "{last_updated:?}")?;
         Ok(())
     }
 

@@ -11,7 +11,7 @@ use std::cell::Cell;
 /// daemon being locked into a single, hard-coded provider type, the proxy is
 /// configured at runtime with an ordered list of candidate providers.
 /// Currently only [`IpLocationProvider`](crate::location::providers::ip::IpLocationProvider)
-/// exists, but adding a new source (e.g. GeoClue, GPS, a manual override) is
+/// exists, but adding a new source (e.g. `GeoClue`, GPS, a manual override) is
 /// just a matter of implementing [`LocationProvider`] and registering it,
 /// without touching any other call sites.
 pub struct LocationProviderWrapper {
@@ -49,7 +49,7 @@ impl LocationProvider for LocationProviderWrapper {
 
     fn on_cleanup(&self) {
         if let Err(e) = self.latest_location.get().to_cache() {
-            warn!("Failed to write location cache: {}", e);
+            warn!("Failed to write location cache: {e}");
         }
     }
 }

@@ -15,12 +15,13 @@ impl Control {
 #[interface(name = "org.freedesktop.impl.portal.asahi.Control")]
 impl Control {
 
-    /// ManualCtl method - used by the CLI tool to manually set dark mode
+    /// `ManualCtl` method - used by the CLI tool to manually set dark mode
     /// -1 = Automatic
     /// 0 = No Preference
     /// 1 = Dark Mode
     /// 2 = Light Mode
     #[zbus(name = "setManualDarkMode")]
+    #[allow(clippy::unused_self)]
     fn set_manual_darkmode(&self, code: i32) {
         // Store dark mode setting
         let mut ctx = CONTEXT.lock_recover();
@@ -36,6 +37,7 @@ impl Control {
 
     /// Allow querying of current manual control setting as a property
     #[zbus(property, name = "manualDarkModeSetting")]
+    #[allow(clippy::unused_self)]
     fn current_darkmode_setting(&self) -> i32 {
         let ctx = CONTEXT.lock_recover();
         let current_setting = ctx.manual_darkmode;

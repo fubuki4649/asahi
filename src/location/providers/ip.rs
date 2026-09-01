@@ -50,7 +50,7 @@ impl LocationProvider for IpLocationProvider {
             },
             // Otherwise, try reading the cached location
             Err(e) => {
-                warn!("Failed to get fresh location via IP: {}", e);
+                warn!("Failed to get fresh location via IP: {e}");
                 Err(e)
             }
         }
