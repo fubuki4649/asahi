@@ -52,24 +52,27 @@ fn main() {
     }).unwrap_or_else(|e| warn!("Failed to set exit hook: {e}"));
 
 
+    // Broadcast immediately on startup so clients don't have to wait up to
+    // `sunset_check_frequency` seconds for the first mode signal.
+    calculate_and_broadcast_theme();
+
     loop {
-        // Snapshot the frequency before releasing the lock so the sleep
-        // happens outside the critical section (as before).
-        let sleep_duration = {
-            let mut ctx = CONTEXT.lock_recover();
-
-            // Check for sunset/sunrise if manual darkmode isn't set
-            if ctx.manual_darkmode == -1 {
-                let portal = PORTAL.lock_recover();
-                portal.broadcast_darkmode(ctx.calculate_dark_mode());
-                // portal is dropped here
-            }
-
+        sleep(Duration::from_secs({
+            let ctx = CONTEXT.lock_recover();
             ctx.sunset_check_frequency
-            // ctx is dropped here, before the sleep
-        };
+        }));
 
-        sleep(Duration::from_secs(sleep_duration));
+        calculate_and_broadcast_theme();
     }
-    
+
+}
+
+/// Calculates the current dark mode value and broadcasts it over D-Bus.
+fn calculate_and_broadcast_theme() {
+    let mut ctx = CONTEXT.lock_recover();
+
+    if ctx.manual_darkmode == -1 {
+        let portal = PORTAL.lock_recover();
+        portal.broadcast_darkmode(ctx.calculate_dark_mode());
+    }
 }

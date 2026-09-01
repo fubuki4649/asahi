@@ -1,9 +1,14 @@
 use crate::location::model::Location;
 use crate::location::providers::provider_trait::LocationProvider;
 use anyhow::{anyhow, Error};
-use log::{debug, warn};
-use std::time::SystemTime;
+use log::{debug, info, warn};
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 
+/// Number of additional attempts after the first failure.
+const RETRIES: u32 = 3;
+/// Delay between attempts.
+const RETRY_DELAY: Duration = Duration::from_secs(2);
 
 pub struct IpLocationProvider;
 
@@ -38,22 +43,30 @@ impl IpLocationProvider {
 impl LocationProvider for IpLocationProvider {
     fn get_location(&self) -> Result<Location, Error> {
         let now = SystemTime::now();
+        let total_attempts = RETRIES + 1;
+        let mut last_err = None;
 
-        match Self::get_location_ip() {
-            Ok(location) => {
-                debug!("Location acquired by IP: Lat: {}, Lon: {}", location.0, location.1);
-                Ok(Location {
-                    lat: location.0,
-                    lon: location.1,
-                    last_updated: now,
-                })
-            },
-            // Otherwise, try reading the cached location
-            Err(e) => {
-                warn!("Failed to get fresh location via IP: {e}");
-                Err(e)
+        for attempt in 1..=total_attempts {
+            match Self::get_location_ip() {
+                Ok((lat, lon)) => {
+                    debug!("Location acquired by IP: Lat: {lat}, Lon: {lon}");
+                    return Ok(Location { lat, lon, last_updated: now });
+                }
+                Err(e) => {
+                    warn!("IP geolocation attempt {attempt}/{total_attempts} failed: {e}");
+                    last_err = Some(e);
+
+                    if attempt < total_attempts {
+                        info!("Retrying in {}s...", RETRY_DELAY.as_secs());
+                        sleep(RETRY_DELAY);
+                    }
+                }
             }
         }
+
+        let err = last_err.unwrap();
+        warn!("IP geolocation failed after all {total_attempts} attempts: {err}");
+        Err(err)
     }
 
     fn on_cleanup(&self) {
