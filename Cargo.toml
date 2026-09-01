@@ -6,12 +6,20 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-toml = { version = "0.8", default-features = false, features = ["parse"] }
-anyhow = { version = "1.0.98", default-features = false }
-minreq = { version = "2.14.0", default-features = false }
-log = "0.4.27"
-zbus = "5.8.0"
-sunrise = "2.1.0"
-chrono = { version = "0.4.41", default-features = false, features = ["clock", "std"] }
-simple_logger = "5.0.0"
-ctrlc = { version = "3.4.7", features = ["termination"] }
+toml = { version = "0.8.23", default-features = false, features = ["parse"] }
+anyhow = { version = "1.0.104", default-features = false }
+minreq = { version = "2.14.1", default-features = false }
+log = { version = "0.4.34", default-features = false }
+zbus = { version = "5.19.0", default-features = false, features = ["async-io", "blocking-api"] }
+sunrise = { version = "2.1.0", default-features = false, features = ["std"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+simple_logger = { version = "5.2.0", default-features = false }
+ctrlc = { version = "3.5.2", features = ["termination"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
