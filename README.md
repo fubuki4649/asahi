@@ -19,34 +19,62 @@ Coming Soon!
 
 ### INSTALLATION (Manual)
 
-1. Copy the binary to `/usr/lib/xdg-desktop-portal-asahi` (or wherever else portals are stored on the system)
+Build the release binary, then install files to the following locations (all `/usr` destinations require root):
 
-2. Copy config files
-    - `configs/asahi.portal` to `/usr/share/xdg-desktop-portal/portals/asahi.portal`
-    - `configs/org.freedesktop.impl.portal.desktop.asahi.service` to `/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.asahi.service`
-    - `configs/xdg-desktop-portal-asahi.service` to `/usr/lib/systemd/user/xdg-desktop-portal-asahi.service`
+| Source                                                      | Destination                                                                    |
+|-------------------------------------------------------------|--------------------------------------------------------------------------------|
+| `target/release/asahi`                                      | `/usr/lib/xdg-desktop-portal-asahi`                                            |
+| `scripts/asahictl`                                          | `/usr/bin/asahictl`                                                            |
+| `configs/asahi.portal`                                      | `/usr/share/xdg-desktop-portal/portals/asahi.portal`                           |
+| `configs/org.freedesktop.impl.portal.desktop.asahi.service` | `/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.asahi.service` |
+| `configs/xdg-desktop-portal-asahi.service`                  | `/usr/lib/systemd/user/xdg-desktop-portal-asahi.service`                       |
 
+> **Note:** The D-Bus `.service` file and the systemd unit both hardcode `/usr/lib/xdg-desktop-portal-asahi`. If your distribution uses a different prefix (e.g. `/usr/libexec/`), update both files accordingly before installing.
 
-3. Append the following line to the end of the active `*-portals.conf` file
+Next, assign asahi as the `Settings` portal backend. The recommended location is the **user-level** `portals.conf`, which takes precedence over system-wide defaults and requires no root:
 
+```ini
+# ~/.config/xdg-desktop-portal/portals.conf
+[preferred]
+org.freedesktop.impl.portal.Settings=asahi
+```
 
-    org.freedesktop.impl.portal.Settings=asahi
+The key **must** be under `[preferred]`; bare keys outside a section are silently ignored. See the [upstream docs](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html) for the full format and lookup order.
 
+Finally, reload the user service manager and restart the portal:
 
-For help identifying the active config file, read the XDG Desktop Portal docs [here](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html#description)
+```
+systemctl --user daemon-reload
+systemctl --user restart xdg-desktop-portal
+```
 
-Alternatively, use `scripts/set-portal-config.sh` to automatically perform this step.
+> **Note:** `daemon-reload` is required after installing a new unit; without it systemd will reject the D-Bus activation request. The unit also gates on `ConditionEnvironment=WAYLAND_DISPLAY` — if activation silently fails, check that your compositor has exported that variable into the systemd user environment (`systemctl --user show-environment`).
 
+Alternatively, just run this
 
-4. Finally, restart `xdg-desktop-portal`
+```shell
+### 1. Build
+cargo build --release
 
+### 2. Install Files (System-wide)
+sudo install -Dm755 target/release/asahi /usr/lib/xdg-desktop-portal-asahi
+sudo install -Dm755 scripts/asahictl /usr/bin/asahictl
+sudo install -Dm644 configs/asahi.portal /usr/share/xdg-desktop-portal/portals/asahi.portal
+sudo install -Dm644 configs/org.freedesktop.impl.portal.desktop.asahi.service /usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.asahi.service
+sudo install -Dm644 configs/xdg-desktop-portal-asahi.service /usr/lib/systemd/user/xdg-desktop-portal-asahi.service
 
-    systemctl --user restart xdg-desktop-portal
+### 3. Configure Portal (User-level, no root needed)
+mkdir -p ~/.config/xdg-desktop-portal
+cat << 'EOF' > ~/.config/xdg-desktop-portal/portals.conf
+[preferred]
+default=gtk
+org.freedesktop.impl.portal.Settings=asahi
+EOF
 
-
-See the [Arch Wiki](https://wiki.archlinux.org/title/XDG_Desktop_Portal#Configuration) for more information on
-configuring the XDG Desktop Portal
-
+### 4. Reload and Restart (User session)
+systemctl --user daemon-reload
+systemctl --user restart xdg-desktop-portal
+```
 
 ### CONFIGURATION
 
@@ -71,11 +99,11 @@ Both files are optional. A sample config with all available keys and their defau
 
 ### CLI UTILITY
 
-The [`scripts/asahictl`](scripts/asahictl) helper script can be used to query daemon state or set manual overrides. Run `asahictl --help` (or `asahictl help`) for usage and available commands.
+[`scripts/asahictl`](scripts/asahictl) queries daemon state and sets manual overrides. Run `asahictl --help` for usage.
 
 ### D-BUS MANAGEMENT INTERFACE
 
-In addition to standard XDG portal interfaces (`org.freedesktop.impl.portal.Settings`), `asahi` exposes a custom management interface for control and inspection:
+In addition to `org.freedesktop.impl.portal.Settings`, `asahi` exposes a custom management interface:
 
 * **Destination:** `org.freedesktop.impl.portal.desktop.asahi`
 * **Object Path:** `/org/freedesktop/portal/desktop`
@@ -85,15 +113,12 @@ In addition to standard XDG portal interfaces (`org.freedesktop.impl.portal.Sett
 * `setManualDarkMode(int32)`: Sets or clears a manual theme override (`-1` = Automatic, `0` = No Preference, `1` = Dark, `2` = Light).
 
 #### Properties (Read-Only)
-* `currentTheme` (`u32`): Theme value currently being broadcast (`0` = No Preference, `1` = Dark, `2` = Light).
-* `isOverrideSet` (`bool`): `true` if a manual override is active, `false` otherwise.
-* `nextTransitionAt` (`string`): Expected time of next sunrise/sunset switch as an RFC 3339 UTC timestamp.
-* `location` (`(double, double)`): Latitude and longitude coordinates currently used for solar calculations.
+* `currentTheme` (`u32`): Theme currently being broadcast (`0` = No Preference, `1` = Dark, `2` = Light).
+* `isOverrideSet` (`bool`): Whether a manual override is active.
+* `nextTransitionAt` (`string`): Expected time of next sunrise/sunset transition as an RFC 3339 UTC timestamp.
+* `location` (`(double, double)`): Coordinates currently used for solar calculations.
 
-### FIREFOX 
+### FIREFOX
 
-By default, Firefox does not listen to XDG Desktop Portal broadcasts, instead only listening to the GNOME-specific GSettings instead.
-
-To make Firefox listen to the XDG Desktop Portal for color scheme changes go to `about:config` and set `widget.use-xdg-desktop-portal.settings` to `2`.
-
-
+Firefox ignores XDG Desktop Portal theme signals, listening only to GNOME's GSettings by default instead.
+To fix this, set `widget.use-xdg-desktop-portal.settings` to `2` in `about:config`.
