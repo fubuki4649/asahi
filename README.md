@@ -11,7 +11,7 @@
 ### DEPENDENCIES
 
 - xdg-desktop-portal
-- dbus-send (for asahictl)
+- busctl (systemd)
 
 ### INSTALLATION (Automatic)
 

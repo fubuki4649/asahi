@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # asahictl - CLI tool for managing system settings
 # Usage: asahictl [command] [value]
@@ -46,13 +46,9 @@ show_version() {
     echo "$SCRIPT_NAME version $VERSION"
 }
 
-
 # Function for manual override
 set_override() {
-    local value="$1"
-    local int_val
-
-    case "$value" in
+    case "$1" in
         "off")    int_val=-1 ;;
         "dark")   int_val=1 ;;
         "light")  int_val=2 ;;
@@ -62,40 +58,33 @@ set_override() {
             return 1
             ;;
         *)
-            echo "Error: Invalid value '$value' for override. Valid values are: off, dark, light, nopref" >&2
+            echo "Error: Invalid value '$1' for override. Valid values are: off, dark, light, nopref" >&2
             return 1
             ;;
     esac
 
-    echo "Setting manual override to: $value"
+    echo "Setting manual override to: $1"
 
-    dbus-send --session --dest="$DBUS_DEST" \
-        --type=method_call "$DBUS_PATH" \
-        "$DBUS_IFACE.setManualDarkMode" \
-        int32:"$int_val"
+    if ! reply=$(busctl --user call "$DBUS_DEST" "$DBUS_PATH" "$DBUS_IFACE" setManualDarkMode i "$int_val" 2>&1); then
+        echo "Error: Failed to set manual override: $reply" >&2
+        return 1
+    fi
 
-    echo "Manual override successfully set to $value"
+    echo "Manual override successfully set to $1"
 }
 
-# Queries a single property on the Control D-Bus interface.
-# Prints the raw dbus-send output (or error text) and returns its exit status.
-_dbus_get_property() {
-    local prop="$1"
-    dbus-send --session --print-reply --dest="$DBUS_DEST" \
-        --type=method_call "$DBUS_PATH" \
-        org.freedesktop.DBus.Properties.Get \
-        string:"$DBUS_IFACE" string:"$prop" 2>&1
+# Queries a single property on the Control D-Bus interface using busctl
+_busctl_get() {
+    busctl --user get-property "$DBUS_DEST" "$DBUS_PATH" "$DBUS_IFACE" "$1" 2>&1
 }
 
 # Queries the currentTheme and isOverrideSet properties
 query_theme() {
-    local theme_reply override_reply theme_val is_override theme_name override_str
-
-    if ! theme_reply=$(_dbus_get_property "currentTheme"); then
+    if ! theme_reply=$(_busctl_get "currentTheme"); then
         echo "Error: Failed to query currentTheme: $theme_reply" >&2
         return 1
     fi
-    theme_val=$(echo "$theme_reply" | awk '/variant/ {print $NF}')
+    theme_val="${theme_reply#* }"
 
     case "$theme_val" in
         0) theme_name="No Preference" ;;
@@ -104,11 +93,11 @@ query_theme() {
         *) theme_name="Unknown ($theme_val)" ;;
     esac
 
-    if ! override_reply=$(_dbus_get_property "isOverrideSet"); then
+    if ! override_reply=$(_busctl_get "isOverrideSet"); then
         echo "Error: Failed to query isOverrideSet: $override_reply" >&2
         return 1
     fi
-    is_override=$(echo "$override_reply" | awk '/variant/ {print $NF}')
+    is_override="${override_reply#* }"
 
     if [ "$is_override" = "true" ]; then
         override_str="override set"
@@ -121,25 +110,25 @@ query_theme() {
 
 # Queries the nextTransitionAt property (ISO 8601 timestamp of the next sunrise/sunset switch)
 query_next_transition() {
-    local reply value
-    if ! reply=$(_dbus_get_property "nextTransitionAt"); then
+    if ! reply=$(_busctl_get "nextTransitionAt"); then
         echo "Error: Failed to query nextTransitionAt: $reply" >&2
         return 1
     fi
-    value=$(echo "$reply" | sed -n 's/.*string "\(.*\)".*/\1/p')
+    value="${reply#*\"}"
+    value="${value%\"*}"
 
     echo "Next transition at: $value"
 }
 
 # Queries the location property (lat/lon currently used for sunrise/sunset calculations)
 query_location() {
-    local reply lat lon
-    if ! reply=$(_dbus_get_property "location"); then
+    if ! reply=$(_busctl_get "location"); then
         echo "Error: Failed to query location: $reply" >&2
         return 1
     fi
-    lat=$(echo "$reply" | awk '/double/ {print $2}' | sed -n '1p')
-    lon=$(echo "$reply" | awk '/double/ {print $2}' | sed -n '2p')
+    lat_lon="${reply#*(dd) }"
+    lat="${lat_lon%% *}"
+    lon="${lat_lon#* }"
 
     echo "Location: lat=$lat, lon=$lon"
 }
@@ -153,27 +142,17 @@ query_all() {
 
 # Dispatcher for query command
 query_daemon() {
-    local target="$1"
-
-    case "$target" in
-        "all")
-            query_all
-            ;;
-        "theme")
-            query_theme
-            ;;
-        "next-transition")
-            query_next_transition
-            ;;
-        "location")
-            query_location
-            ;;
+    case "$1" in
+        "all")             query_all ;;
+        "theme")           query_theme ;;
+        "next-transition") query_next_transition ;;
+        "location")        query_location ;;
         "")
             echo "Error: query requires a target (all, theme, next-transition, location)" >&2
             return 1
             ;;
         *)
-            echo "Error: Invalid target '$target' for query. Valid targets are: all, theme, next-transition, location" >&2
+            echo "Error: Invalid target '$1' for query. Valid targets are: all, theme, next-transition, location" >&2
             return 1
             ;;
     esac
@@ -181,7 +160,6 @@ query_daemon() {
 
 # Main logic
 main() {
-    # Handle special flags first
     case "$1" in
         "-h"|"--help"|"help")
             show_help
@@ -191,10 +169,6 @@ main() {
             show_version
             exit 0
             ;;
-    esac
-
-    # Handle commands
-    case "$1" in
         "override")
             set_override "$2"
             exit $?
@@ -204,14 +178,12 @@ main() {
             exit $?
             ;;
         "")
-            # No arguments provided - show help
             echo "Error: No command specified" >&2
             echo
             show_help
             exit 1
             ;;
         *)
-            # Unknown command - show help
             echo "Error: Unknown command '$1'" >&2
             echo
             show_help
@@ -220,5 +192,4 @@ main() {
     esac
 }
 
-# Run main function with all arguments
 main "$@"
