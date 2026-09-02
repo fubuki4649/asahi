@@ -10,15 +10,17 @@ use sunrise::{SolarDay, SolarEvent};
 
 
 pub struct Context {
-    pub location: Location,
-    pub location_provider: LocationProviderWrapper,
+    location_provider: LocationProviderWrapper,
+    location: Location,
 
     // Internal states for current date, and calculated sunrise/sunset times
-    pub date: NaiveDate,
-    pub sunrise: DateTime<Utc>,
-    pub sunset: DateTime<Utc>,
+    date: NaiveDate,
+    sunrise: DateTime<Utc>,
+    sunset: DateTime<Utc>,
 
-    pub manual_darkmode: i32,
+    // Config values controlled by the CLI tool
+    /// Manual override for dark mode (-1 = no override);
+    pub override_theme: i32,
 
     // Config values loaded from /etc/asahi/config.toml and ~/.config/asahi/config.toml
     /// How long location data stays valid (seconds). Default: 3600 (1 hour).
@@ -67,7 +69,7 @@ impl Default for Context {
             date: NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
             sunrise: Utc::now(),
             sunset: Utc::now(),
-            manual_darkmode: -1,
+            override_theme: -1,
             location_ttl,
             sunset_check_frequency,
             sunrise_offset,
@@ -112,7 +114,7 @@ impl Context {
     }
 
     pub fn calculate_dark_mode(&mut self) -> u32 {
-        if self.manual_darkmode == -1 {
+        if self.override_theme == -1 {
             // Update location/sunrise/sunset times first.
             // Note: update_location() already calls update_sunrise() when location changes,
             // but we call it here too in case the date changed without the location expiring.
@@ -126,16 +128,20 @@ impl Context {
             let effective_sunset  = self.sunset + chrono::Duration::minutes(self.sunset_offset);
 
             // Send light mode (2) signal if it is daytime
-            return if effective_sunrise <= now && now < effective_sunset {
+            if effective_sunrise <= now && now < effective_sunset {
                 2
             }
             // Otherwise, set dark mode (1) signal
             else {
                 1
             }
+        } else {
+            self.override_theme.cast_unsigned()
         }
+    }
 
-        self.manual_darkmode.cast_unsigned()
+    pub fn on_cleanup(&self) {
+        self.location_provider.on_cleanup();
     }
 
 }

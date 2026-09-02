@@ -2,7 +2,6 @@ use crate::_utils::mutex_ext::MutexExt;
 use crate::config::load_config;
 use crate::context::Context;
 use crate::dbus_portal::portal_connection::PortalConnection;
-use location::providers::provider_trait::LocationProvider;
 use log::warn;
 use std::sync::{LazyLock, Mutex};
 use std::thread::sleep;
@@ -13,6 +12,7 @@ mod context;
 mod location;
 mod _utils;
 mod config;
+mod hooks;
 
 
 static CONTEXT: LazyLock<Mutex<Context>> = LazyLock::new(|| {
@@ -25,7 +25,7 @@ static PORTAL: LazyLock<Mutex<PortalConnection>> = LazyLock::new(|| {
 
 fn main() {
 
-    // Load log level from config before anything else so all subsequent log calls respect it.
+    // Load log level from config before anything else, so all subsequent log calls respect it.
     // Accepts: "error", "warn", "info", "debug", "trace". Defaults to "info".
     let log_level = load_config()
         .get("log_level")
@@ -39,7 +39,7 @@ fn main() {
     ctrlc::set_handler(move || {
         // Persist the last known location to the cache before exiting
         let ctx = CONTEXT.lock_recover();
-        ctx.location_provider.on_cleanup();
+        ctx.on_cleanup();
         drop(ctx);
 
         // Broadcast dark mode = unset before exiting
@@ -54,7 +54,7 @@ fn main() {
 
     // Broadcast immediately on startup so clients don't have to wait up to
     // `sunset_check_frequency` seconds for the first mode signal.
-    calculate_and_broadcast_theme();
+    broadcast_current_mode();
 
     loop {
         sleep(Duration::from_secs({
@@ -62,17 +62,28 @@ fn main() {
             ctx.sunset_check_frequency
         }));
 
-        calculate_and_broadcast_theme();
+        broadcast_current_mode();
     }
 
 }
 
-/// Calculates the current dark mode value and broadcasts it over D-Bus.
-fn calculate_and_broadcast_theme() {
+/// Calculates the current dark mode value and — if it has changed since the
+/// last broadcast — emits a D-Bus signal and runs the appropriate hooks.
+fn broadcast_current_mode() {
     let mut ctx = CONTEXT.lock_recover();
+    if ctx.override_theme != -1 { return; }
 
-    if ctx.manual_darkmode == -1 {
-        let portal = PORTAL.lock_recover();
-        portal.broadcast_darkmode(ctx.calculate_dark_mode());
+    let new_value = ctx.calculate_dark_mode();
+    drop(ctx);
+
+    // If the color theme has changed from the previous broadcast, broadcast the new value and run hooks
+    let mut portal = PORTAL.lock_recover();
+    if portal.prev_broadcast_val != new_value {
+        portal.prev_broadcast_val = new_value;
+        
+        portal.broadcast_darkmode(new_value);
+        drop(portal);
+        
+        hooks::run_hooks(new_value);
     }
 }

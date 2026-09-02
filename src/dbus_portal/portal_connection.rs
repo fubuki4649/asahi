@@ -8,13 +8,18 @@ use zbus::blocking::{connection, Connection};
 use zbus::zvariant::Value::U32;
 
 
-pub struct PortalConnection(Connection);
+pub struct PortalConnection {
+    connection: Connection,
+    /// The last mode value sent over D-Bus. Used by callers to suppress
+    /// redundant broadcasts and decide when to fire transition hooks.
+    pub prev_broadcast_val: u32,
+}
 
 impl Deref for PortalConnection {
     type Target = Connection;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.connection
     }
 }
 
@@ -29,7 +34,7 @@ impl PortalConnection {
                 .serve_at("/org/freedesktop/portal/desktop", Control::new())?
                 .build()?;
 
-        Ok(Self(conn))
+        Ok(Self { connection: conn, prev_broadcast_val: 0 })
     }
 
     /// 0 - No Preference

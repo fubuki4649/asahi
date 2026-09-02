@@ -1,10 +1,8 @@
-use zbus::interface;
 use crate::_utils::mutex_ext::MutexExt;
-use crate::{CONTEXT, PORTAL};
+use crate::{hooks, CONTEXT, PORTAL};
+use zbus::interface;
 
-pub struct Control {
-
-}
+pub struct Control;
 
 impl Control {
     pub fn new() -> Self {
@@ -22,17 +20,26 @@ impl Control {
     /// 2 = Light Mode
     #[zbus(name = "setManualDarkMode")]
     #[allow(clippy::unused_self)]
-    fn set_manual_darkmode(&self, code: i32) {
-        // Store dark mode setting
+    fn set_manual_darkmode(&self, override_mode: i32) {
         let mut ctx = CONTEXT.lock_recover();
-        ctx.manual_darkmode = code;
-
-        // Broadcast signal
-        let conn = PORTAL.lock_recover();
-        conn.broadcast_darkmode(ctx.calculate_dark_mode());
-
-        drop(conn);
+        
+        // Set override mode and get the new dark mode value.
+        ctx.override_theme = override_mode;
+        let new_value = ctx.calculate_dark_mode();
+        
         drop(ctx);
+
+        // If the color theme has changed from the previous broadcast, broadcast the new value and run hooks
+        let mut portal = PORTAL.lock_recover();
+        if portal.prev_broadcast_val != new_value {
+            portal.prev_broadcast_val = new_value;
+
+            portal.broadcast_darkmode(new_value);
+            drop(portal);
+
+            hooks::run_hooks(new_value);
+        }
+        
     }
 
     /// Allow querying of current manual control setting as a property
@@ -40,7 +47,7 @@ impl Control {
     #[allow(clippy::unused_self)]
     fn current_darkmode_setting(&self) -> i32 {
         let ctx = CONTEXT.lock_recover();
-        let current_setting = ctx.manual_darkmode;
+        let current_setting = ctx.override_theme;
         drop(ctx);
         current_setting
     }
