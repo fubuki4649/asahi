@@ -13,6 +13,10 @@
 - xdg-desktop-portal
 - dbus-send (for asahictl)
 
+### INSTALLATION (Automatic)
+
+Coming Soon!
+
 ### INSTALLATION (Manual)
 
 1. Copy the binary to `/usr/lib/xdg-desktop-portal-asahi` (or wherever else portals are stored on the system)
@@ -65,8 +69,31 @@ Both files are optional. A sample config with all available keys and their defau
 | `sunrise_offset`         | `0`     | Minutes to shift the light-mode trigger (± relative to sunrise)                 |
 | `sunset_offset`          | `0`     | Minutes to shift the dark-mode trigger (± relative to sunset)                   |
 
-### TODO
+### CLI UTILITY
 
-- [ ] Provide a makefile
-- [ ] Find a firefox workaround
+The [`scripts/asahictl`](scripts/asahictl) helper script can be used to query daemon state or set manual overrides. Run `asahictl --help` (or `asahictl help`) for usage and available commands.
+
+### D-BUS MANAGEMENT INTERFACE
+
+In addition to standard XDG portal interfaces (`org.freedesktop.impl.portal.Settings`), `asahi` exposes a custom management interface for control and inspection:
+
+* **Destination:** `org.freedesktop.impl.portal.desktop.asahi`
+* **Object Path:** `/org/freedesktop/portal/desktop`
+* **Interface:** `org.freedesktop.impl.portal.asahi.Control`
+
+#### Methods
+* `setManualDarkMode(int32)`: Sets or clears a manual theme override (`-1` = Automatic, `0` = No Preference, `1` = Dark, `2` = Light).
+
+#### Properties (Read-Only)
+* `currentTheme` (`u32`): Theme value currently being broadcast (`0` = No Preference, `1` = Dark, `2` = Light).
+* `isOverrideSet` (`bool`): `true` if a manual override is active, `false` otherwise.
+* `nextTransitionAt` (`string`): Expected time of next sunrise/sunset switch as an RFC 3339 UTC timestamp.
+* `location` (`(double, double)`): Latitude and longitude coordinates currently used for solar calculations.
+
+### FIREFOX 
+
+By default, Firefox does not listen to XDG Desktop Portal broadcasts, instead only listening to the GNOME-specific GSettings instead.
+
+To make Firefox listen to the XDG Desktop Portal for color scheme changes go to `about:config` and set `widget.use-xdg-desktop-portal.settings` to `2`.
+
 

@@ -144,4 +144,33 @@ impl Context {
         self.location_provider.on_cleanup();
     }
 
+    /// Returns the location currently used for sunrise/sunset calculations.
+    pub fn location(&self) -> Location {
+        self.location
+    }
+
+    /// Calculates the timestamp of the next expected sunrise/sunset transition,
+    /// taking configured offsets into account. If both of today's transitions
+    /// have already passed, this rolls over to tomorrow's sunrise.
+    pub fn next_transition_at(&mut self) -> DateTime<Utc> {
+        // Update location/sunrise/sunset times first, in case they are stale.
+        self.update_location();
+        self.update_sunrise();
+        let now = Utc::now();
+
+        let effective_sunrise = self.sunrise + chrono::Duration::minutes(self.sunrise_offset);
+        let effective_sunset  = self.sunset + chrono::Duration::minutes(self.sunset_offset);
+
+        if now < effective_sunrise {
+            effective_sunrise
+        } else if now < effective_sunset {
+            effective_sunset
+        } else {
+            // Both of today's transitions have passed; compute tomorrow's sunrise.
+            let tomorrow = self.date.succ_opt().unwrap_or(self.date);
+            let tomorrows_times = SolarDay::new((&self.location).into(), tomorrow);
+            tomorrows_times.event_time(SolarEvent::Sunrise) + chrono::Duration::minutes(self.sunrise_offset)
+        }
+    }
+
 }

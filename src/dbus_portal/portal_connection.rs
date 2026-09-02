@@ -1,5 +1,5 @@
 use std::ops::Deref;
-use crate::dbus_portal::control::Control;
+use crate::dbus_portal::management::Control;
 use crate::dbus_portal::xdg_interfaces::XDGInterfaces;
 use anyhow::Error;
 use log::info;

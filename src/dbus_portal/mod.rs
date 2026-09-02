@@ -1,3 +1,3 @@
 mod xdg_interfaces;
-mod control;
+mod management;
 pub mod portal_connection;
