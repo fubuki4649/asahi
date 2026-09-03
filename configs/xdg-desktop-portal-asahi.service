@@ -8,7 +8,6 @@ ConditionEnvironment=WAYLAND_DISPLAY
 Type=dbus
 BusName=org.freedesktop.impl.portal.desktop.asahi
 ExecStart=/usr/lib/xdg-desktop-portal-asahi
-ImportEnvironment=WAYLAND_DISPLAY
 Restart=on-failure
 Slice=session.slice
 

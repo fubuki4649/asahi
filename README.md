@@ -13,9 +13,13 @@
 - xdg-desktop-portal
 - busctl (systemd)
 
-### INSTALLATION (Automatic)
+### INSTALLATION
 
-Coming Soon!
+```
+make install
+```
+
+`make install` builds the binary, installs all system files, configures `portals.conf`, and restarts `xdg-desktop-portal` in one step. `PREFIX` defaults to `/usr`; override for non-standard layouts (e.g. `make install PREFIX=/usr/local`). `DESTDIR` is supported for staged package builds (portals.conf and systemctl steps are skipped automatically).
 
 ### INSTALLATION (Manual)
 
@@ -29,49 +33,18 @@ Build the release binary, then install files to the following locations (all `/u
 | `configs/org.freedesktop.impl.portal.desktop.asahi.service` | `/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.asahi.service` |
 | `configs/xdg-desktop-portal-asahi.service`                  | `/usr/lib/systemd/user/xdg-desktop-portal-asahi.service`                       |
 
-> **Note:** The D-Bus `.service` file and the systemd unit both hardcode `/usr/lib/xdg-desktop-portal-asahi`. If your distribution uses a different prefix (e.g. `/usr/libexec/`), update both files accordingly before installing.
+> **Note:** The D-Bus `.service` file and the systemd unit both hardcode the binary path. If your distribution uses a prefix other than `/usr` (e.g. `/usr/libexec/`), update the `Exec=` / `ExecStart=` lines in both config files before installing.
 
-Next, assign asahi as the `Settings` portal backend. The recommended location is the **user-level** `portals.conf`, which takes precedence over system-wide defaults and requires no root:
+Add the following to `~/.config/xdg-desktop-portal/portals.conf` under `[preferred]` (bare keys not belonging to a section are silently ignored):
 
 ```ini
-# ~/.config/xdg-desktop-portal/portals.conf
 [preferred]
 org.freedesktop.impl.portal.Settings=asahi
 ```
 
-The key **must** be under `[preferred]`; bare keys outside a section are silently ignored. See the [upstream docs](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html) for the full format and lookup order.
-
-Finally, reload the user service manager and restart the portal:
+Then:
 
 ```
-systemctl --user daemon-reload
-systemctl --user restart xdg-desktop-portal
-```
-
-> **Note:** `daemon-reload` is required after installing a new unit; without it systemd will reject the D-Bus activation request. The unit also gates on `ConditionEnvironment=WAYLAND_DISPLAY` — if activation silently fails, check that your compositor has exported that variable into the systemd user environment (`systemctl --user show-environment`).
-
-Alternatively, just run this
-
-```shell
-### 1. Build
-cargo build --release
-
-### 2. Install Files (System-wide)
-sudo install -Dm755 target/release/asahi /usr/lib/xdg-desktop-portal-asahi
-sudo install -Dm755 scripts/asahictl /usr/bin/asahictl
-sudo install -Dm644 configs/asahi.portal /usr/share/xdg-desktop-portal/portals/asahi.portal
-sudo install -Dm644 configs/org.freedesktop.impl.portal.desktop.asahi.service /usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.asahi.service
-sudo install -Dm644 configs/xdg-desktop-portal-asahi.service /usr/lib/systemd/user/xdg-desktop-portal-asahi.service
-
-### 3. Configure Portal (User-level, no root needed)
-mkdir -p ~/.config/xdg-desktop-portal
-cat << 'EOF' > ~/.config/xdg-desktop-portal/portals.conf
-[preferred]
-default=gtk
-org.freedesktop.impl.portal.Settings=asahi
-EOF
-
-### 4. Reload and Restart (User session)
 systemctl --user daemon-reload
 systemctl --user restart xdg-desktop-portal
 ```
@@ -115,7 +88,7 @@ In addition to `org.freedesktop.impl.portal.Settings`, `asahi` exposes a custom 
 #### Properties (Read-Only)
 * `currentTheme` (`u32`): Theme currently being broadcast (`0` = No Preference, `1` = Dark, `2` = Light).
 * `isOverrideSet` (`bool`): Whether a manual override is active.
-* `nextTransitionAt` (`string`): Expected time of next sunrise/sunset transition as an RFC 3339 UTC timestamp.
+* `nextTransitionAt` (`string`): Expected time of next sunrise/sunset transition as an RFC 3339 timestamp in the local timezone.
 * `location` (`(double, double)`): Coordinates currently used for solar calculations.
 
 ### FIREFOX

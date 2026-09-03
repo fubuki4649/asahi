@@ -1,5 +1,6 @@
 use crate::_utils::mutex_ext::MutexExt;
 use crate::{hooks, CONTEXT, PORTAL};
+use chrono::Local;
 use zbus::interface;
 
 pub struct Control;
@@ -64,14 +65,14 @@ impl Control {
     }
 
     /// Allow querying of the next expected sunrise/sunset transition, as an
-    /// RFC 3339 (ISO 8601) timestamp in UTC.
+    /// RFC 3339 timestamp in the local timezone.
     #[zbus(property, name = "nextTransitionAt")]
     #[allow(clippy::unused_self)]
     fn next_transition_at(&self) -> String {
         let mut ctx = CONTEXT.lock_recover();
         let next_transition = ctx.next_transition_at();
         drop(ctx);
-        next_transition.to_rfc3339()
+        next_transition.with_timezone(&Local).to_rfc3339()
     }
 
     /// Allow querying of the latitude/longitude currently used for sunrise/sunset

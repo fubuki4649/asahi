@@ -14,27 +14,38 @@ pub struct IpLocationProvider;
 
 impl IpLocationProvider {
 
-    // Gets the location as (lat, lon)
+    /// Extracts a float value for `key` from a JSON string, tolerating any
+    /// amount of whitespace between the key, colon, and value.
+    fn extract_float(response: &str, key: &str) -> Result<f64, Error> {
+        let key_pattern = format!("\"{}\"", key);
+        let key_pos = response
+            .find(key_pattern.as_str())
+            .ok_or_else(|| anyhow!("{key} not found in response"))?;
+
+        // Advance past the closing quote of the key name, then find the colon.
+        let after_key = &response[key_pos + key_pattern.len()..];
+        let colon_pos = after_key
+            .find(':')
+            .ok_or_else(|| anyhow!("{key}: colon not found"))?;
+
+        // Skip the colon and any leading whitespace before the number.
+        let after_colon = after_key[colon_pos + 1..].trim_start();
+
+        let end = after_colon
+            .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+            .unwrap_or(after_colon.len());
+
+        after_colon[..end]
+            .parse::<f64>()
+            .map_err(|e| anyhow!("{key}: failed to parse value: {e}"))
+    }
+
     fn get_location_ip() -> Result<(f64, f64), Error> {
-        let r = minreq::get("https://ip-api.com/json").send()?;
+        let r = minreq::get("http://ip-api.com/json").send()?;
         let response = r.as_str()?;
 
-        // Very naive parsing; uses JSON keys to extract values
-        let lat_marker = "\"lat\":";
-        let lon_marker = "\"lon\":";
-
-        let lat_idx = response.find(lat_marker).ok_or(anyhow!("Latitude not found"))? + lat_marker.len();
-        let lon_idx = response.find(lon_marker).ok_or(anyhow!("Longitude not found"))? + lon_marker.len();
-
-        // parse lat
-        let lat_str = &response[lat_idx..];
-        let lat_end = lat_str.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-').unwrap_or(lat_str.len());
-        let lat: f64 = lat_str[..lat_end].parse()?;
-
-        // parse lon
-        let lon_str = &response[lon_idx..];
-        let lon_end = lon_str.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-').unwrap_or(lon_str.len());
-        let lon: f64 = lon_str[..lon_end].parse()?;
+        let lat = Self::extract_float(response, "lat")?;
+        let lon = Self::extract_float(response, "lon")?;
 
         Ok((lat, lon))
     }

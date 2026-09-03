@@ -65,7 +65,7 @@ set_override() {
 
     echo "Setting manual override to: $1"
 
-    if ! reply=$(busctl --user call "$DBUS_DEST" "$DBUS_PATH" "$DBUS_IFACE" setManualDarkMode i "$int_val" 2>&1); then
+    if ! reply=$(busctl --user call -- "$DBUS_DEST" "$DBUS_PATH" "$DBUS_IFACE" setManualDarkMode i "$int_val" 2>&1); then
         echo "Error: Failed to set manual override: $reply" >&2
         return 1
     fi
@@ -117,7 +117,7 @@ query_next_transition() {
     value="${reply#*\"}"
     value="${value%\"*}"
 
-    echo "Next transition at: $value"
+    echo "Next transition at: $value (Local Time)"
 }
 
 # Queries the location property (lat/lon currently used for sunrise/sunset calculations)

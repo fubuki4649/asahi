@@ -153,9 +153,6 @@ impl Context {
     /// taking configured offsets into account. If both of today's transitions
     /// have already passed, this rolls over to tomorrow's sunrise.
     pub fn next_transition_at(&mut self) -> DateTime<Utc> {
-        // Update location/sunrise/sunset times first, in case they are stale.
-        self.update_location();
-        self.update_sunrise();
         let now = Utc::now();
 
         let effective_sunrise = self.sunrise + chrono::Duration::minutes(self.sunrise_offset);
