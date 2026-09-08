@@ -1,6 +1,5 @@
 use crate::_utils::mutex_ext::MutexExt;
 use crate::{hooks, CONTEXT, PORTAL};
-use chrono::Local;
 use zbus::interface;
 
 pub struct Control;
@@ -15,7 +14,7 @@ impl Control {
 impl Control {
 
     /// `ManualCtl` method - used by the CLI tool to manually set dark mode
-    /// -1 = Automatic
+    /// -1 = No Override
     /// 0 = No Preference
     /// 1 = Dark Mode
     /// 2 = Light Mode
@@ -25,7 +24,7 @@ impl Control {
         let mut ctx = CONTEXT.lock_recover();
         
         // Set override mode and get the new dark mode value.
-        ctx.override_theme = override_mode;
+        ctx.set_theme_override(override_mode);
         let new_value = ctx.calculate_dark_mode();
         
         drop(ctx);
@@ -33,8 +32,6 @@ impl Control {
         // If the color theme has changed from the previous broadcast, broadcast the new value and run hooks
         let mut portal = PORTAL.lock_recover();
         if portal.prev_broadcast_val != new_value {
-            portal.prev_broadcast_val = new_value;
-
             portal.broadcast_darkmode(new_value);
             drop(portal);
 
@@ -48,7 +45,7 @@ impl Control {
     #[allow(clippy::unused_self)]
     fn is_override_set(&self) -> bool {
         let ctx = CONTEXT.lock_recover();
-        let has_override = ctx.override_theme != -1;
+        let has_override = ctx.sun_stats.is_right();
         drop(ctx);
         has_override
     }
@@ -64,17 +61,6 @@ impl Control {
         theme
     }
 
-    /// Allow querying of the next expected sunrise/sunset transition, as an
-    /// RFC 3339 timestamp in the local timezone.
-    #[zbus(property, name = "nextTransitionAt")]
-    #[allow(clippy::unused_self)]
-    fn next_transition_at(&self) -> String {
-        let mut ctx = CONTEXT.lock_recover();
-        let next_transition = ctx.next_transition_at();
-        drop(ctx);
-        next_transition.with_timezone(&Local).to_rfc3339()
-    }
-
     /// Allow querying of the latitude/longitude currently used for sunrise/sunset
     /// calculations, useful for debugging incorrect location data.
     #[zbus(property, name = "location")]
@@ -84,6 +70,22 @@ impl Control {
         let location = ctx.location();
         drop(ctx);
         (location.lat, location.lon)
+    }
+
+    /// Expected time of today's sunrise/sunset as RFC 3339 timestamps in the local timezone.
+    /// Returns empty strings when a manual override is active.
+    #[zbus(property, name = "todayTransitionTimes")]
+    #[allow(clippy::unused_self)]
+    fn today_transition_times(&self) -> (String, String) {
+        let ctx = CONTEXT.lock_recover();
+        let result = ctx.sun_stats.as_ref().left().map(|stats| {
+            (
+                stats.sunrise.naive_local().to_string(),
+                stats.sunset.naive_local().to_string(),
+            )
+        }).unwrap_or_default();
+        drop(ctx);
+        result
     }
 
 }

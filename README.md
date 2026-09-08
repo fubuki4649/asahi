@@ -67,8 +67,6 @@ Both files are optional. A sample config with all available keys and their defau
 | `override_lon`           | (off)   | (Optional) Override auto geolocation (must be set together with `override_lat`) |
 | `location_ttl`           | `3600`  | Seconds before a location fix is refreshed                                      |
 | `sunset_check_frequency` | `600`   | Seconds between sunrise/sunset checks                                           |
-| `sunrise_offset`         | `0`     | Minutes to shift the light-mode trigger (± relative to sunrise)                 |
-| `sunset_offset`          | `0`     | Minutes to shift the dark-mode trigger (± relative to sunset)                   |
 
 ### CLI UTILITY
 
@@ -88,7 +86,7 @@ In addition to `org.freedesktop.impl.portal.Settings`, `asahi` exposes a custom 
 #### Properties (Read-Only)
 * `currentTheme` (`u32`): Theme currently being broadcast (`0` = No Preference, `1` = Dark, `2` = Light).
 * `isOverrideSet` (`bool`): Whether a manual override is active.
-* `nextTransitionAt` (`string`): Expected time of next sunrise/sunset transition as an RFC 3339 timestamp in the local timezone.
+* `todayTransitionTimes` (`(string, string)`): Expected time of today's sunrise/sunset times as RFC 3339 timestamp in the local timezone.
 * `location` (`(double, double)`): Coordinates currently used for solar calculations.
 
 ### FIREFOX

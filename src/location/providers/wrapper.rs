@@ -1,4 +1,4 @@
-use crate::location::model::Location;
+use crate::location::types::Location;
 use crate::location::providers::provider_trait::LocationProvider;
 use anyhow::Error;
 use log::{info, warn};

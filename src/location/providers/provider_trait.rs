@@ -1,4 +1,4 @@
-use crate::location::model::Location;
+use crate::location::types::Location;
 use anyhow::Error;
 
 /// A source of location data.

@@ -42,11 +42,12 @@ impl PortalConnection {
     /// 1 - Dark Mode
     ///
     /// 2 - Light Mode
-    pub fn broadcast_darkmode(&self, value: u32) {
+    pub fn broadcast_darkmode(&mut self, value: u32) {
         let iref = self.object_server()
             .interface::<_, XDGInterfaces>("/org/freedesktop/portal/desktop")
             .expect("Interface not found at path");
 
+        self.prev_broadcast_val = value;
         block_on(iref.get_mut().change_setting(iref.signal_emitter(), "org.freedesktop.appearance", "color-scheme", U32(value)));
         info!("Set darkmode to {value}!");
     }

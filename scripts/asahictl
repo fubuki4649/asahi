@@ -22,7 +22,7 @@ COMMANDS:
     override [value]              Set or clear manual dark mode override
                                   Values: off, dark, light, nopref
     query [target]                Query daemon state and telemetry
-                                  Targets: all, theme, next-transition, location
+                                  Targets: all, theme, today, location
 
 EXAMPLES:
     $SCRIPT_NAME override off         Disable manual override and determine mode automatically
@@ -31,7 +31,7 @@ EXAMPLES:
     $SCRIPT_NAME override nopref      Manually force no system preference
     $SCRIPT_NAME query all            Print a summary of the current live state
     $SCRIPT_NAME query theme          Print the current theme and override status
-    $SCRIPT_NAME query next-transition  Print the next expected sunrise/sunset switch
+    $SCRIPT_NAME query today          Print today's expected sunrise and sunset times
     $SCRIPT_NAME query location       Print the location currently used for calculations
 
 OPTIONS:
@@ -108,16 +108,22 @@ query_theme() {
     echo "Theme: $theme_name ($override_str)"
 }
 
-# Queries the nextTransitionAt property (ISO 8601 timestamp of the next sunrise/sunset switch)
-query_next_transition() {
-    if ! reply=$(_busctl_get "nextTransitionAt"); then
-        echo "Error: Failed to query nextTransitionAt: $reply" >&2
+# Queries the todayTransitionTimes property (RFC 3339 timestamps of today's sunrise and sunset)
+query_today() {
+    if ! reply=$(_busctl_get "todayTransitionTimes"); then
+        echo "Error: Failed to query todayTransitionTimes: $reply" >&2
         return 1
     fi
-    value="${reply#*\"}"
-    value="${value%\"*}"
+    # busctl formats a (ss) struct as: (ss) "sunrise_val" "sunset_val"
+    stripped="${reply#*(ss) }"
+    sunrise="${stripped%%\"*}"
+    stripped="${stripped#*\"}"
+    sunrise="${stripped%%\"*}"
+    stripped="${stripped#*\" \"}"
+    sunset="${stripped%%\"*}"
 
-    echo "Next transition at: $value (Local Time)"
+    echo "Sunrise: $sunrise"
+    echo "Sunset:  $sunset"
 }
 
 # Queries the location property (lat/lon currently used for sunrise/sunset calculations)
@@ -136,23 +142,23 @@ query_location() {
 # Prints a combined summary of all query targets
 query_all() {
     query_theme || return 1
-    query_next_transition || return 1
+    query_today || return 1
     query_location || return 1
 }
 
 # Dispatcher for query command
 query_daemon() {
     case "$1" in
-        "all")             query_all ;;
-        "theme")           query_theme ;;
-        "next-transition") query_next_transition ;;
-        "location")        query_location ;;
+        "all")      query_all ;;
+        "theme")    query_theme ;;
+        "today")    query_today ;;
+        "location") query_location ;;
         "")
-            echo "Error: query requires a target (all, theme, next-transition, location)" >&2
+            echo "Error: query requires a target (all, theme, today, location)" >&2
             return 1
             ;;
         *)
-            echo "Error: Invalid target '$1' for query. Valid targets are: all, theme, next-transition, location" >&2
+            echo "Error: Invalid target '$1' for query. Valid targets are: all, theme, today, location" >&2
             return 1
             ;;
     esac

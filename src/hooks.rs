@@ -29,12 +29,10 @@ pub fn run_hooks(mode: u32) {
 /// Returns the ordered list of hook directories to search.
 fn hook_dirs(subdir: &str) -> [PathBuf; 2] {
     let user_base = env::var("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            let mut p = PathBuf::from(env::var("HOME").unwrap_or_default());
-            p.push(".config");
-            p
-        });
+        .map_or_else(
+            |_| { PathBuf::from(env::var("HOME").unwrap_or_default()).join(".config") },
+            PathBuf::from
+        );
 
     [
         PathBuf::from("/etc/asahi").join(subdir),
@@ -65,6 +63,5 @@ fn run_dir(dir: &Path) {
 
 fn is_executable(path: &Path) -> bool {
     path.metadata()
-        .map(|m| m.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
+        .is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
 }

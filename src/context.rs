@@ -1,36 +1,27 @@
 use crate::config::load_config;
-use crate::location::model::Location;
 use crate::location::providers::ip::IpLocationProvider;
 use crate::location::providers::manual::ManualLocationProvider;
 use crate::location::providers::provider_trait::LocationProvider;
 use crate::location::providers::wrapper::LocationProviderWrapper;
-use chrono::{DateTime, Local, NaiveDate, Utc};
+use crate::location::Location;
+use crate::sun_info::SunInfo;
+use chrono::Local;
+use either::{Either, Left, Right};
 use log::{debug, info, warn};
-use sunrise::{SolarDay, SolarEvent};
-
 
 pub struct Context {
     location_provider: LocationProviderWrapper,
     location: Location,
 
     // Internal states for current date, and calculated sunrise/sunset times
-    date: NaiveDate,
-    sunrise: DateTime<Utc>,
-    sunset: DateTime<Utc>,
-
-    // Config values controlled by the CLI tool
-    /// Manual override for dark mode (-1 = no override);
-    pub override_theme: i32,
+    // sun_stats is `i32` if there's a manual override in place
+    pub sun_stats: Either<SunInfo, i32>,
 
     // Config values loaded from /etc/asahi/config.toml and ~/.config/asahi/config.toml
     /// How long location data stays valid (seconds). Default: 3600 (1 hour).
     pub location_ttl: u64,
     /// How often to check for sunrise/sunset (seconds). Default: 600 (10 minutes).
     pub sunset_check_frequency: u64,
-    /// Minutes to shift when "daytime" begins relative to true sunrise. Negative = earlier.
-    pub sunrise_offset: i64,
-    /// Minutes to shift when "daytime" ends relative to true sunset. Negative = earlier.
-    pub sunset_offset: i64,
 }
 
 impl Default for Context {
@@ -45,14 +36,6 @@ impl Default for Context {
             .and_then(toml::Value::as_integer)
             .unwrap_or(600).cast_unsigned();
 
-        let sunrise_offset = cfg.get("sunrise_offset")
-            .and_then(toml::Value::as_integer)
-            .unwrap_or(0);
-
-        let sunset_offset = cfg.get("sunset_offset")
-            .and_then(toml::Value::as_integer)
-            .unwrap_or(0);
-
         let lat = cfg.get("override_lat").and_then(toml::Value::as_float);
         let lon = cfg.get("override_lon").and_then(toml::Value::as_float);
 
@@ -66,14 +49,9 @@ impl Default for Context {
         Self {
             location: Location::default(),
             location_provider: LocationProviderWrapper::new(providers),
-            date: NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
-            sunrise: Utc::now(),
-            sunset: Utc::now(),
-            override_theme: -1,
+            sun_stats: Left(SunInfo::default()),
             location_ttl,
             sunset_check_frequency,
-            sunrise_offset,
-            sunset_offset,
         }
     }
 }
@@ -85,23 +63,22 @@ impl Context {
     }
 
     /// Recalculates the sunrise/sunset times if out of date
-    pub fn update_sunrise(&mut self) {
-        let today = Local::now().date_naive();
+    fn update_sunrise(&mut self) {
+        // Only update if there's no manual override present
+        if let Left(stats) = &mut self.sun_stats {
+            let now = Local::now().naive_local();
 
-        if self.date != today {
-            self.date = today;
-
-            let todays_times = SolarDay::new((&self.location).into(), today);
-            self.sunrise = todays_times.event_time(SolarEvent::Sunrise);
-            self.sunset = todays_times.event_time(SolarEvent::Sunset);
-
-            info!("Acquired Sunrise/Sunset for {} at lat: {}, lon: {}", today, self.location.lat, self.location.lon);
-            debug!("Sunrise: {}, Sunset: {}", self.sunrise, self.sunset);
+            // If we're already past today's sunset, then update sunset/sunrise readings
+            if now > stats.sunset.naive_local() {
+                stats.update(&self.location);
+                info!("Updated Sunrise/Sunset for {} at lat: {}, lon: {}", now, self.location.lat, self.location.lon);
+                debug!("Sunrise: {}, Sunset: {}", stats.sunrise, stats.sunset);
+            }
         }
     }
 
     /// Recalculates location data if out of date
-    pub fn update_location(&mut self) {
+    fn update_location(&mut self) {
         if !self.location.validate(self.location_ttl) {
             match self.location_provider.get_location() {
                 Ok(location) => {
@@ -114,29 +91,23 @@ impl Context {
     }
 
     pub fn calculate_dark_mode(&mut self) -> u32 {
-        if self.override_theme == -1 {
-            // Update location/sunrise/sunset times first.
-            // Note: update_location() already calls update_sunrise() when location changes,
-            // but we call it here too in case the date changed without the location expiring.
+        if self.sun_stats.is_left() {
+            // Make sure everything's still fresh
             self.update_location();
             self.update_sunrise();
-            let now = Utc::now();
 
-            // Apply configured offsets to the true astronomical times.
-            // Positive offset = shift later, negative = shift earlier.
-            let effective_sunrise = self.sunrise + chrono::Duration::minutes(self.sunrise_offset);
-            let effective_sunset  = self.sunset + chrono::Duration::minutes(self.sunset_offset);
-
-            // Send light mode (2) signal if it is daytime
-            if effective_sunrise <= now && now < effective_sunset {
-                2
-            }
-            // Otherwise, set dark mode (1) signal
-            else {
-                1
-            }
+            // We only care about local time
+            self.sun_stats.as_ref().unwrap_left().calculate_theme()
         } else {
-            self.override_theme.cast_unsigned()
+            (*self.sun_stats.as_ref().unwrap_right()).cast_unsigned()
+        }
+    }
+
+    pub fn set_theme_override(&mut self, mode: i32) {
+        if mode == -1 {
+            self.sun_stats = Left(SunInfo::new(&self.location));
+        } else {
+            self.sun_stats = Right(mode);
         }
     }
 
@@ -147,27 +118,6 @@ impl Context {
     /// Returns the location currently used for sunrise/sunset calculations.
     pub fn location(&self) -> Location {
         self.location
-    }
-
-    /// Calculates the timestamp of the next expected sunrise/sunset transition,
-    /// taking configured offsets into account. If both of today's transitions
-    /// have already passed, this rolls over to tomorrow's sunrise.
-    pub fn next_transition_at(&mut self) -> DateTime<Utc> {
-        let now = Utc::now();
-
-        let effective_sunrise = self.sunrise + chrono::Duration::minutes(self.sunrise_offset);
-        let effective_sunset  = self.sunset + chrono::Duration::minutes(self.sunset_offset);
-
-        if now < effective_sunrise {
-            effective_sunrise
-        } else if now < effective_sunset {
-            effective_sunset
-        } else {
-            // Both of today's transitions have passed; compute tomorrow's sunrise.
-            let tomorrow = self.date.succ_opt().unwrap_or(self.date);
-            let tomorrows_times = SolarDay::new((&self.location).into(), tomorrow);
-            tomorrows_times.event_time(SolarEvent::Sunrise) + chrono::Duration::minutes(self.sunrise_offset)
-        }
     }
 
 }

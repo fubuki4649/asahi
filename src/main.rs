@@ -8,12 +8,12 @@ use std::thread::sleep;
 use std::time::Duration;
 
 mod dbus_portal;
-mod context;
+pub mod context;
 mod location;
 mod _utils;
 mod config;
 mod hooks;
-
+mod sun_info;
 
 static CONTEXT: LazyLock<Mutex<Context>> = LazyLock::new(|| {
     Mutex::new(Context::new())
@@ -43,7 +43,7 @@ fn main() {
         drop(ctx);
 
         // Broadcast dark mode = unset before exiting
-        let portal = PORTAL.lock_recover();
+        let mut portal = PORTAL.lock_recover();
         portal.broadcast_darkmode(0);
         drop(portal);
 
@@ -71,7 +71,8 @@ fn main() {
 /// last broadcast — emits a D-Bus signal and runs the appropriate hooks.
 fn broadcast_current_mode() {
     let mut ctx = CONTEXT.lock_recover();
-    if ctx.override_theme != -1 { return; }
+    // Do nothing if an override is set
+    if ctx.sun_stats.is_right() { return; }
 
     let new_value = ctx.calculate_dark_mode();
     drop(ctx);
@@ -79,8 +80,6 @@ fn broadcast_current_mode() {
     // If the color theme has changed from the previous broadcast, broadcast the new value and run hooks
     let mut portal = PORTAL.lock_recover();
     if portal.prev_broadcast_val != new_value {
-        portal.prev_broadcast_val = new_value;
-        
         portal.broadcast_darkmode(new_value);
         drop(portal);
         
