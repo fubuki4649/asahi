@@ -56,12 +56,10 @@ fn main() {
     // `sunset_check_frequency` seconds for the first mode signal.
     broadcast_current_mode();
 
-    loop {
-        sleep(Duration::from_secs({
-            let ctx = CONTEXT.lock_recover();
-            ctx.sunset_check_frequency
-        }));
+    let check_frequency = Duration::from_secs(CONTEXT.lock_recover().sunset_check_frequency);
 
+    loop {
+        sleep(check_frequency);
         broadcast_current_mode();
     }
 
