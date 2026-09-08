@@ -1,5 +1,5 @@
 use crate::_utils::mutex_ext::MutexExt;
-use crate::config::load_config;
+use crate::config::{load_config, Value};
 use crate::context::Context;
 use crate::dbus_portal::portal_connection::PortalConnection;
 use log::warn;
@@ -29,7 +29,7 @@ fn main() {
     // Accepts: "error", "warn", "info", "debug", "trace". Defaults to "info".
     let log_level = load_config()
         .get("log_level")
-        .and_then(|v| v.as_str())
+        .and_then(Value::as_str)
         .and_then(|s| s.parse::<log::Level>().ok())
         .unwrap_or(log::Level::Info);
 

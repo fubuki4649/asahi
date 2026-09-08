@@ -77,11 +77,13 @@ impl Control {
     #[zbus(property, name = "todayTransitionTimes")]
     #[allow(clippy::unused_self)]
     fn today_transition_times(&self) -> (String, String) {
-        let ctx = CONTEXT.lock_recover();
+        let mut ctx = CONTEXT.lock_recover();
+        // Trigger the stale-data check so sun_stats reflects today's wall-clock date.
+        ctx.calculate_dark_mode();
         let result = ctx.sun_stats.as_ref().left().map(|stats| {
             (
-                stats.sunrise.naive_local().to_string(),
-                stats.sunset.naive_local().to_string(),
+                stats.sunrise.naive_local().format("%Y-%m-%d %I:%M:%S %p").to_string(),
+                stats.sunset.naive_local().format("%Y-%m-%d %I:%M:%S %p").to_string(),
             )
         }).unwrap_or_default();
         drop(ctx);

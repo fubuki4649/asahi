@@ -1,8 +1,7 @@
 use crate::location::Location;
 use chrono::{DateTime, Local, TimeZone};
 use chrono_tz::Tz;
-use std::time::{SystemTime, UNIX_EPOCH};
-use sun::SunPhase::{Sunrise, Sunset};
+use sunrise::{SolarDay, SolarEvent};
 
 
 #[derive(Debug)]
@@ -28,13 +27,16 @@ impl SunInfo {
     }
 
     pub fn update(&mut self, location: &Location) {
-        let now_ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        let today = SolarDay::new((*location).into(), Local::now().date_naive());
 
-        let sunrise_ms = sun::time_at_phase(now_ms as i64, Sunrise, location.lat, location.lon, 0.0);
-        let sunset_ms  = sun::time_at_phase(now_ms as i64, Sunset, location.lat, location.lon, 0.0);
-
-        self.sunrise = DateTime::from_timestamp_millis(sunrise_ms).unwrap_or_default().with_timezone(&location.timezone);
-        self.sunset = DateTime::from_timestamp_millis(sunset_ms).unwrap_or_default().with_timezone(&location.timezone);
+        self.sunrise = today
+            .event_time(SolarEvent::Sunrise)
+            .unwrap_or_default()
+            .with_timezone(&location.timezone);
+        self.sunset = today
+            .event_time(SolarEvent::Sunset)
+            .unwrap_or_default()
+            .with_timezone(&location.timezone);
     }
 
     pub fn calculate_theme(&self) -> u32 {

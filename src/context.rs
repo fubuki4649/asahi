@@ -1,4 +1,4 @@
-use crate::config::load_config;
+use crate::config::{load_config, Value};
 use crate::location::providers::ip::IpLocationProvider;
 use crate::location::providers::manual::ManualLocationProvider;
 use crate::location::providers::provider_trait::LocationProvider;
@@ -29,15 +29,15 @@ impl Default for Context {
         let cfg = load_config();
 
         let location_ttl = cfg.get("location_ttl")
-            .and_then(toml::Value::as_integer)
+            .and_then(Value::as_integer)
             .unwrap_or(3600).cast_unsigned();
 
         let sunset_check_frequency = cfg.get("sunset_check_frequency")
-            .and_then(toml::Value::as_integer)
+            .and_then(Value::as_integer)
             .unwrap_or(600).cast_unsigned();
 
-        let lat = cfg.get("override_lat").and_then(toml::Value::as_float);
-        let lon = cfg.get("override_lon").and_then(toml::Value::as_float);
+        let lat = cfg.get("override_lat").and_then(Value::as_float);
+        let lon = cfg.get("override_lon").and_then(Value::as_float);
 
         // Init list of location providers
         let providers: Vec<Box<dyn LocationProvider + Send + Sync>> =

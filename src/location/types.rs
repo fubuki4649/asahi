@@ -92,3 +92,9 @@ impl Location {
     }
 
 }
+
+impl From<Location> for sunrise::Coordinates {
+    fn from(loc: Location) -> Self {
+        Self::new(loc.lat, loc.lon).expect("invalid coordinates")
+    }
+}

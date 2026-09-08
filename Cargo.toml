@@ -6,18 +6,18 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-toml = { version = "0.8.23", default-features = false, features = ["parse"] }
 anyhow = { version = "1.0.104", default-features = false }
-minreq = { version = "2.14.1", default-features = false }
+minreq = { version = "3.0.0", default-features = false }
 log = { version = "0.4.34", default-features = false }
 zbus = { version = "5.19.0", default-features = false, features = ["async-io", "blocking-api"] }
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 simple_logger = { version = "5.2.0", default-features = false }
 ctrlc = { version = "3.5.2", features = ["termination"] }
-sun = "0.3.1"
+sunrise = { version = "3.0.0", default-features = false, features = ["std"] }
 chrono-tz = { version = "0.10.4", default-features = false }
 either = { version = "1.18.0", default-features = false }
 tinyjson = "2.5.1"
+boml = "2.0.0"
 
 [profile.release]
 opt-level = "z"
