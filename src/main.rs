@@ -3,6 +3,8 @@ use crate::config::{load_config, Value};
 use crate::context::Context;
 use crate::dbus_portal::portal_connection::PortalConnection;
 use log::warn;
+use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
+use signal_hook::iterator::Signals;
 use std::sync::{LazyLock, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
@@ -13,7 +15,7 @@ mod location;
 mod _utils;
 mod config;
 mod hooks;
-mod sun_info;
+pub mod sun;
 
 static CONTEXT: LazyLock<Mutex<Context>> = LazyLock::new(|| {
     Mutex::new(Context::new())
@@ -36,20 +38,28 @@ fn main() {
     simple_logger::init_with_level(log_level).unwrap();
 
     // Set exit hook
-    ctrlc::set_handler(move || {
-        // Persist the last known location to the cache before exiting
-        let ctx = CONTEXT.lock_recover();
-        ctx.on_cleanup();
-        drop(ctx);
+    match Signals::new([SIGINT, SIGTERM, SIGHUP]) {
+        Ok(mut signals) => {
+            std::thread::spawn(move || {
+                // Wait for SIGINT, SIGTERM, or SIGHUP on a different thread
+                if signals.forever().next().is_some() {
+                    // Persist the last known location to the cache before exiting
+                    let ctx = CONTEXT.lock_recover();
+                    ctx.on_cleanup();
+                    drop(ctx);
 
-        // Broadcast dark mode = unset before exiting
-        let mut portal = PORTAL.lock_recover();
-        portal.broadcast_darkmode(0);
-        drop(portal);
+                    // Broadcast dark mode = unset before exiting
+                    let mut portal = PORTAL.lock_recover();
+                    portal.broadcast_darkmode(0);
+                    drop(portal);
 
-        // Exit with code 0
-        std::process::exit(0);
-    }).unwrap_or_else(|e| warn!("Failed to set exit hook: {e}"));
+                    // Exit with code 0
+                    std::process::exit(0);
+                }
+            });
+        }
+        Err(e) => warn!("Failed to set exit hook: {e}"),
+    }
 
 
     // Broadcast immediately on startup so clients don't have to wait up to
@@ -70,7 +80,7 @@ fn main() {
 fn broadcast_current_mode() {
     let mut ctx = CONTEXT.lock_recover();
     // Do nothing if an override is set
-    if ctx.sun_stats.is_right() { return; }
+    if ctx.sun_stats.has_override() { return; }
 
     let new_value = ctx.calculate_dark_mode();
     drop(ctx);

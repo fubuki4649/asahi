@@ -1,4 +1,5 @@
 use crate::_utils::mutex_ext::MutexExt;
+use crate::sun::sun_stats::SunStats;
 use crate::{hooks, CONTEXT, PORTAL};
 use zbus::interface;
 
@@ -45,7 +46,7 @@ impl Control {
     #[allow(clippy::unused_self)]
     fn is_override_set(&self) -> bool {
         let ctx = CONTEXT.lock_recover();
-        let has_override = ctx.sun_stats.is_right();
+        let has_override = ctx.sun_stats.has_override();
         drop(ctx);
         has_override
     }
@@ -80,12 +81,13 @@ impl Control {
         let mut ctx = CONTEXT.lock_recover();
         // Trigger the stale-data check so sun_stats reflects today's wall-clock date.
         ctx.calculate_dark_mode();
-        let result = ctx.sun_stats.as_ref().left().map(|stats| {
-            (
+        let result = match &ctx.sun_stats {
+            SunStats::Calculated(stats) => (
                 stats.sunrise.naive_local().format("%Y-%m-%d %I:%M:%S %p").to_string(),
                 stats.sunset.naive_local().format("%Y-%m-%d %I:%M:%S %p").to_string(),
-            )
-        }).unwrap_or_default();
+            ),
+            SunStats::Override(_) => Default::default(),
+        };
         drop(ctx);
         result
     }

@@ -4,9 +4,9 @@ use crate::location::providers::manual::ManualLocationProvider;
 use crate::location::providers::provider_trait::LocationProvider;
 use crate::location::providers::wrapper::LocationProviderWrapper;
 use crate::location::Location;
-use crate::sun_info::SunInfo;
+use crate::sun::sun_info::SunInfo;
+use crate::sun::sun_stats::SunStats;
 use chrono::Local;
-use either::{Either, Left, Right};
 use log::{debug, info, warn};
 
 pub struct Context {
@@ -14,8 +14,8 @@ pub struct Context {
     location: Location,
 
     // Internal states for current date, and calculated sunrise/sunset times
-    // sun_stats is `i32` if there's a manual override in place
-    pub sun_stats: Either<SunInfo, i32>,
+    // sun_stats is `Override(i32)` if there's a manual override in place
+    pub sun_stats: SunStats,
 
     // Config values loaded from /etc/asahi/config.toml and ~/.config/asahi/config.toml
     /// How long location data stays valid (seconds). Default: 3600 (1 hour).
@@ -49,7 +49,7 @@ impl Default for Context {
         Self {
             location: Location::default(),
             location_provider: LocationProviderWrapper::new(providers),
-            sun_stats: Left(SunInfo::default()),
+            sun_stats: SunStats::Calculated(SunInfo::default()),
             location_ttl,
             sunset_check_frequency,
         }
@@ -65,7 +65,7 @@ impl Context {
     /// Recalculates the sunrise/sunset times if out of date
     fn update_sunrise(&mut self) {
         // Only update if there's no manual override present
-        if let Left(stats) = &mut self.sun_stats {
+        if let SunStats::Calculated(stats) = &mut self.sun_stats {
             let now = Local::now().naive_local();
 
             // If we're on a new day, update sunrise/sunset readings
@@ -91,23 +91,27 @@ impl Context {
     }
 
     pub fn calculate_dark_mode(&mut self) -> u32 {
-        if self.sun_stats.is_left() {
-            // Make sure everything's still fresh
-            self.update_location();
-            self.update_sunrise();
+        if let SunStats::Override(mode) = self.sun_stats {
+            return mode.cast_unsigned();
+        }
 
-            // We only care about local time
-            self.sun_stats.as_ref().unwrap_left().calculate_theme()
+        // Make sure everything's still fresh
+        self.update_location();
+        self.update_sunrise();
+
+        // We only care about local time
+        if let SunStats::Calculated(ref stats) = self.sun_stats {
+            stats.calculate_theme()
         } else {
-            (*self.sun_stats.as_ref().unwrap_right()).cast_unsigned()
+            unreachable!()
         }
     }
 
     pub fn set_theme_override(&mut self, mode: i32) {
         if mode == -1 {
-            self.sun_stats = Left(SunInfo::new(&self.location));
+            self.sun_stats = SunStats::Calculated(SunInfo::new(&self.location));
         } else {
-            self.sun_stats = Right(mode);
+            self.sun_stats = SunStats::Override(mode);
         }
     }
 
