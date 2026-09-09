@@ -1,8 +1,7 @@
-use crate::location::types::Location;
+use crate::_utils::tz::system_timezone;
 use crate::location::providers::provider_trait::LocationProvider;
+use crate::location::types::Location;
 use anyhow::{anyhow, Error};
-use chrono_tz::Tz;
-use std::fs;
 use std::time::SystemTime;
 
 pub struct ManualLocationProvider {
@@ -14,23 +13,6 @@ impl ManualLocationProvider {
     pub fn new(lat: Option<f64>, lon: Option<f64>) -> Self {
         Self { lat, lon }
     }
-
-    fn system_timezone() -> Result<Tz, Error> {
-        let symlink_path = fs::read_link("/etc/localtime").ok();
-        let symlink_zone = symlink_path.as_deref().and_then(|link| {
-            let s = link.to_str()?;
-            let zone = s.rsplit("zoneinfo/").next()?;
-            (zone != s).then(|| zone.to_owned())
-        });
-
-        // Try reading the symlink to /etc/timezone, otherwise read /etc/timezone directly on systems like debian
-        let iana_tz = match symlink_zone {
-            Some(zone) => zone,
-            None => fs::read_to_string("/etc/timezone")?.trim().to_owned(),
-        };
-
-        iana_tz.parse::<Tz>().map_err(|e| anyhow!("Invalid IANA timezone {iana_tz}: {e}"))
-    }
 }
 
 impl LocationProvider for ManualLocationProvider {
@@ -41,7 +23,7 @@ impl LocationProvider for ManualLocationProvider {
             Ok(Location {
                 lat,
                 lon,
-                timezone: Self::system_timezone()?,
+                timezone: system_timezone()?,
                 last_updated: SystemTime::now(),
             })
         } else {

@@ -14,7 +14,8 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 simple_logger = { version = "5.2.0", default-features = false }
 signal-hook = { version = "0.4.4", default-features = false, features = ["iterator"] }
 sunrise = { version = "3.0.0", default-features = false, features = ["std"] }
-chrono-tz = { version = "0.10.4", default-features = false }
+tz-rs = { version = "0.7.3", default-features = false, features = ["std"] }
+iana-time-zone = { version = "0.1.65", default-features = false }
 tinyjson = "2.5.1"
 boml = "2.0.0"
 

@@ -1,7 +1,7 @@
-use crate::location::types::Location;
+use crate::_utils::tz::validate_iana_timezone;
 use crate::location::providers::provider_trait::LocationProvider;
+use crate::location::types::Location;
 use anyhow::{anyhow, Error};
-use chrono_tz::Tz;
 use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::thread::sleep;
@@ -16,7 +16,7 @@ const RETRY_DELAY: Duration = Duration::from_secs(2);
 pub struct IpLocationProvider;
 
 impl IpLocationProvider {
-    fn get_location_ip() -> Result<(f64, f64, Tz), Error> {
+    fn get_location_ip() -> Result<(f64, f64, String), Error> {
         let r = minreq::get("http://ip-api.com/json").send()?;
         if !(200..300).contains(&r.status_code) { return Err(anyhow!("IP Geolocation Server Error ({})", r.status_code)); }
 
@@ -30,9 +30,11 @@ impl IpLocationProvider {
         let lat = *parsed.get("lat").and_then(JsonValue::get::<f64>).ok_or_else(|| anyhow!("Latitude missing from response"))?;
         let lon = *parsed.get("lon").and_then(JsonValue::get::<f64>).ok_or_else(|| anyhow!("Longitude missing from response"))?;
         let iana_tz = parsed.get("timezone").and_then(JsonValue::get::<String>).ok_or_else(|| anyhow!("Timezone missing from response"))?.as_str();
-        let timezone = iana_tz.parse().map_err(|e| anyhow!("Invalid IANA timezone {iana_tz}: {e}"))?;
+        if !validate_iana_timezone(iana_tz) {
+            return Err(anyhow!("Invalid IANA timezone: {iana_tz}"));
+        }
 
-        Ok((lat, lon, timezone))
+        Ok((lat, lon, iana_tz.to_owned()))
     }
 }
 

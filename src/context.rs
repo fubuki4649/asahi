@@ -121,7 +121,7 @@ impl Context {
 
     /// Returns the location currently used for sunrise/sunset calculations.
     pub fn location(&self) -> Location {
-        self.location
+        self.location.clone()
     }
 
 }

@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Error};
-use chrono_tz::Tz;
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -7,11 +6,11 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Debug)]
 pub struct Location {
     pub lat: f64,
     pub lon: f64,
-    pub timezone: Tz,
+    pub timezone: String,
     pub last_updated: SystemTime,
 }
 
@@ -21,7 +20,7 @@ impl Default for Location {
         Self {
             lat: 35.6887,
             lon: 139.7007,
-            timezone: Tz::Japan,
+            timezone: "Asia/Tokyo".to_owned(),
             last_updated: SystemTime::UNIX_EPOCH,
         }
     }
@@ -56,7 +55,7 @@ impl Location {
         let mut lines = reader.lines();
         let lat = lines.next().ok_or(anyhow!("Malformed Cache: Missing Latitude"))??.trim().parse()?;
         let lon = lines.next().ok_or(anyhow!("Malformed Cache: Missing Longitude"))??.trim().parse()?;
-        let timezone = lines.next().ok_or(anyhow!("Malformed Cache: Missing Timezone"))??.trim().parse().map_err(|e| anyhow!("Malformed Cache: Invalid IANA timezone: {e}"))?;
+        let timezone = lines.next().ok_or(anyhow!("Malformed Cache: Missing Timezone"))??.trim().to_owned();
         let last_updated = lines.next()
             .and_then(Result::ok)
             .and_then(|s| s.trim().parse::<u64>().ok())
@@ -70,7 +69,7 @@ impl Location {
         })
     }
 
-    pub fn to_cache(self) -> Result<(), Error> {
+    pub fn to_cache(&self) -> Result<(), Error> {
         let path = Self::cache_path()?;
 
         // Ensure parent directory exists
@@ -92,6 +91,12 @@ impl Location {
         Ok(())
     }
 
+}
+
+impl From<&Location> for sunrise::Coordinates {
+    fn from(loc: &Location) -> Self {
+        Self::new(loc.lat, loc.lon).expect("invalid coordinates")
+    }
 }
 
 impl From<Location> for sunrise::Coordinates {

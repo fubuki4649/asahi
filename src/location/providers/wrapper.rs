@@ -1,8 +1,8 @@
-use crate::location::types::Location;
 use crate::location::providers::provider_trait::LocationProvider;
+use crate::location::types::Location;
 use anyhow::Error;
 use log::{info, warn};
-use std::cell::Cell;
+use std::sync::Mutex;
 
 /// A [`LocationProvider`] that delegates to a list of underlying providers,
 /// trying each of them in order until one successfully returns a location.
@@ -16,14 +16,14 @@ use std::cell::Cell;
 /// without touching any other call sites.
 pub struct LocationProviderWrapper {
     providers: Vec<Box<dyn LocationProvider + Send + Sync>>,
-    latest_location: Cell<Location>,
+    latest_location: Mutex<Location>,
 }
 
 impl LocationProviderWrapper {
     pub fn new(providers: Vec<Box<dyn LocationProvider + Send + Sync>>) -> Self {
         Self {
             providers,
-            latest_location: Cell::new(Location::from_cache().unwrap_or_default()),
+            latest_location: Mutex::new(Location::from_cache().unwrap_or_default()),
         }
     }
 }
@@ -34,7 +34,7 @@ impl LocationProvider for LocationProviderWrapper {
         for provider in &self.providers {
             match provider.get_location() {
                 Ok(location) => {
-                    self.latest_location.set(location);
+                    *self.latest_location.lock().unwrap() = location.clone();
                     return Ok(location)
                 },
                 Err(e) => warn!("Location provider failed: {e}"),
@@ -44,11 +44,11 @@ impl LocationProvider for LocationProviderWrapper {
         info!("Failed to refresh location. Falling back to cached location");
 
         // If nothing works, check for a previously cached location
-        Ok(self.latest_location.get())
+        Ok(self.latest_location.lock().unwrap().clone())
     }
 
     fn on_cleanup(&self) {
-        if let Err(e) = self.latest_location.get().to_cache() {
+        if let Err(e) = self.latest_location.lock().unwrap().to_cache() {
             warn!("Failed to write location cache: {e}");
         }
     }
