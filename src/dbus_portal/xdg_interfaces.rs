@@ -1,5 +1,4 @@
 //! # D-Bus portal definition for: `org.freedesktop.impl.portal.Settings`
-use crate::unwrap_or_return;
 use log::debug;
 use std::collections::HashMap;
 use zbus::fdo::Error::UnknownProperty;
@@ -35,8 +34,12 @@ impl XDGInterfaces {
 
     /// Read method
     fn read(&self, ns: &str, key: &str) -> Result<OwnedValue, zbus::fdo::Error> {
-        let ns = unwrap_or_return!(self.values.get(ns).ok_or(""), Err(UnknownProperty("Namespace not found".to_string())));
-        let value = unwrap_or_return!(ns.get(key).ok_or(""), Err(UnknownProperty("Key not found".to_string())));
+        let Some(ns) = self.values.get(ns) else {
+            return Err(UnknownProperty("Namespace not found".to_string()));
+        };
+        let Some(value) = ns.get(key) else {
+            return Err(UnknownProperty("Key not found".to_string()));
+        };
 
         Ok(value.try_to_owned().unwrap())
     }

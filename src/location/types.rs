@@ -31,18 +31,22 @@ impl Location {
     /// Checks if the current location is still valid (based off the timestamp).
     /// Returns false if the location data is expired or if the clock has skewed backwards.
     pub fn validate(&self, ttl: u64) -> bool {
-        let elapsed = SystemTime::now()
-            .duration_since(self.last_updated)
-            .unwrap_or_default()
-            .as_secs();
-        ttl >= elapsed
+        let Ok(elapsed) = SystemTime::now().duration_since(self.last_updated) else {
+            return false;
+        };
+        elapsed.as_secs() <= ttl
+    }
+
+    fn cache_path() -> Result<PathBuf, Error> {
+        let base = match env::var_os("XDG_CACHE_HOME") {
+            Some(dir) => PathBuf::from(dir),
+            None => PathBuf::from(env::var_os("HOME").ok_or_else(|| anyhow!("HOME not set"))?).join(".cache"),
+        };
+        Ok(base.join("asahi-location-cache"))
     }
 
     pub fn from_cache() -> Result<Self, Error> {
-        // Build the path to ~/.cache/asahi-location-cache
-        let path = PathBuf::from(env::var("HOME")?)
-            .join(".cache")
-            .join("asahi-location-cache");
+        let path = Self::cache_path()?;
 
         // Open the file
         let file = File::open(&path)?;
@@ -67,10 +71,7 @@ impl Location {
     }
 
     pub fn to_cache(self) -> Result<(), Error> {
-        // Build the path to ~/.cache/asahi-location-cache
-        let path = PathBuf::from(env::var("HOME")?)
-            .join(".cache")
-            .join("asahi-location-cache");
+        let path = Self::cache_path()?;
 
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
@@ -87,7 +88,7 @@ impl Location {
 
         // `last_updated` as a UNIX timestamp
         let last_updated = self.last_updated.duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).as_secs();
-        writeln!(&mut file, "{last_updated:?}")?;
+        writeln!(&mut file, "{last_updated}")?;
         Ok(())
     }
 

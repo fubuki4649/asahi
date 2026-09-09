@@ -68,8 +68,8 @@ impl Context {
         if let Left(stats) = &mut self.sun_stats {
             let now = Local::now().naive_local();
 
-            // If we're already past today's sunset, then update sunset/sunrise readings
-            if now > stats.sunset.naive_local() {
+            // If we're on a new day, update sunrise/sunset readings
+            if now.date() > stats.sunset.naive_local().date() {
                 stats.update(&self.location);
                 info!("Updated Sunrise/Sunset for {} at lat: {}, lon: {}", now, self.location.lat, self.location.lon);
                 debug!("Sunrise: {}, Sunset: {}", stats.sunrise, stats.sunset);

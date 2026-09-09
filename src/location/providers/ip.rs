@@ -1,6 +1,7 @@
 use crate::location::types::Location;
 use crate::location::providers::provider_trait::LocationProvider;
 use anyhow::{anyhow, Error};
+use chrono_tz::Tz;
 use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::thread::sleep;
@@ -15,9 +16,9 @@ const RETRY_DELAY: Duration = Duration::from_secs(2);
 pub struct IpLocationProvider;
 
 impl IpLocationProvider {
-    fn get_location_ip() -> Result<(f64, f64, Box<str>), Error> {
+    fn get_location_ip() -> Result<(f64, f64, Tz), Error> {
         let r = minreq::get("http://ip-api.com/json").send()?;
-        if r.status_code < 200 || r.status_code > 300 { return Err(anyhow!("IP Geolocation Server Error ({})", r.status_code));}
+        if !(200..300).contains(&r.status_code) { return Err(anyhow!("IP Geolocation Server Error ({})", r.status_code)); }
 
         let response = r.as_str()?;
 
@@ -29,8 +30,9 @@ impl IpLocationProvider {
         let lat = *parsed.get("lat").and_then(JsonValue::get::<f64>).ok_or_else(|| anyhow!("Latitude missing from response"))?;
         let lon = *parsed.get("lon").and_then(JsonValue::get::<f64>).ok_or_else(|| anyhow!("Longitude missing from response"))?;
         let iana_tz = parsed.get("timezone").and_then(JsonValue::get::<String>).ok_or_else(|| anyhow!("Timezone missing from response"))?.as_str();
+        let timezone = iana_tz.parse().map_err(|e| anyhow!("Invalid IANA timezone {iana_tz}: {e}"))?;
 
-        Ok((lat, lon, Box::from(iana_tz)))
+        Ok((lat, lon, timezone))
     }
 }
 
@@ -42,13 +44,13 @@ impl LocationProvider for IpLocationProvider {
 
         for attempt in 1..=total_attempts {
             match Self::get_location_ip() {
-                Ok((lat, lon, iana_tz)) => {
+                Ok((lat, lon, timezone)) => {
                     debug!("Location acquired by IP: Lat: {lat}, Lon: {lon}");
                     return Ok(Location {
                         lat,
                         lon,
-                        timezone: iana_tz.parse().map_err(|e| anyhow!("Invalid IANA timezone {iana_tz}: {e}"))?,
-                        last_updated: now
+                        timezone,
+                        last_updated: now,
                     });
                 }
                 Err(e) => {

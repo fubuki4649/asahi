@@ -16,13 +16,12 @@ impl ManualLocationProvider {
     }
 
     fn system_timezone() -> Result<Tz, Error> {
-        let symlink_zone = fs::read_link("/etc/localtime")
-            .ok()
-            .and_then(|link| link.to_str().map(str::to_owned))
-            .and_then(|s| {
-                let zone = s.rsplit("zoneinfo/").next()?.to_owned();
-                (zone != s).then_some(zone)
-            });
+        let symlink_path = fs::read_link("/etc/localtime").ok();
+        let symlink_zone = symlink_path.as_deref().and_then(|link| {
+            let s = link.to_str()?;
+            let zone = s.rsplit("zoneinfo/").next()?;
+            (zone != s).then(|| zone.to_owned())
+        });
 
         // Try reading the symlink to /etc/timezone, otherwise read /etc/timezone directly on systems like debian
         let iana_tz = match symlink_zone {
