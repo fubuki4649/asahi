@@ -66,7 +66,6 @@ Both files are optional. A sample config with all available keys and their defau
 | `override_lat`           | (off)   | (Optional) Override auto geolocation (must be set together with `override_lon`) |
 | `override_lon`           | (off)   | (Optional) Override auto geolocation (must be set together with `override_lat`) |
 | `location_ttl`           | `3600`  | Seconds before a location fix is refreshed                                      |
-| `sunset_check_frequency` | `600`   | Seconds between sunrise/sunset checks                                           |
 
 ### CLI UTILITY
 

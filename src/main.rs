@@ -7,7 +7,6 @@ use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
 use std::sync::{LazyLock, Mutex};
 use std::thread::sleep;
-use std::time::Duration;
 
 mod dbus_portal;
 pub mod context;
@@ -66,10 +65,9 @@ fn main() {
     broadcast_current_theme(false);
     broadcast_current_theme(true);
 
-    let check_frequency = Duration::from_secs(CONTEXT.lock_recover().sunset_check_frequency);
-
     loop {
-        sleep(check_frequency);
+        let sleep_period = CONTEXT.lock_recover().next_wakeup();
+        sleep(sleep_period);
 
         // First broadcast with old location, then update, because updating location is a network
         // operation and thus potentially slow

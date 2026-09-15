@@ -6,18 +6,20 @@ use crate::location::providers::wrapper::LocationProviderWrapper;
 use crate::location::Location;
 use crate::sun::sun_info::SunInfo;
 use crate::sun::sun_stats::SunStats;
-use chrono::Local;
+use chrono::{Local, Timelike};
 use log::{debug, info};
+use std::cmp::min;
+use std::time::{Duration, SystemTime};
+
 
 pub struct Context {
     location_provider: LocationProviderWrapper,
     location: Location,
+    location_ttl: u64,
 
     // Internal states for current date, and calculated sunrise/sunset times
     // sun_stats is `Override(i32)` if there's a manual override in place
     pub sun_stats: SunStats,
-
-    pub sunset_check_frequency: u64,
 }
 
 impl Default for Context {
@@ -27,10 +29,6 @@ impl Default for Context {
         let location_ttl = cfg.get("location_ttl")
             .and_then(Value::as_integer)
             .unwrap_or(3600).cast_unsigned();
-
-        let sunset_check_frequency = cfg.get("sunset_check_frequency")
-            .and_then(Value::as_integer)
-            .unwrap_or(600).cast_unsigned();
 
         let lat = cfg.get("override_lat").and_then(Value::as_float);
         let lon = cfg.get("override_lon").and_then(Value::as_float);
@@ -46,7 +44,7 @@ impl Default for Context {
             location: Location::default(),
             location_provider: LocationProviderWrapper::new(providers, location_ttl),
             sun_stats: SunStats::Calculated(SunInfo::default()),
-            sunset_check_frequency,
+            location_ttl,
         }
     }
 }
@@ -115,6 +113,29 @@ impl Context {
     /// Returns the location currently used for sunrise/sunset calculations.
     pub fn location(&self) -> Location {
         self.location.clone()
+    }
+
+    /// Returns how long to sleep until the next relevant event:
+    /// min(time until location TTL expiry, time until next solar event or end of day) + 1 minute.
+    pub fn next_wakeup(&self) -> Duration {
+        let now = Local::now();
+        const SECS_PER_DAY: u64 = 86_400;
+
+        let till_midnight = SECS_PER_DAY - u64::from(now.num_seconds_from_midnight());
+        let till_location_ttl = self.location_ttl.saturating_sub(
+            SystemTime::now().duration_since(self.location.last_updated).unwrap_or_default().as_secs()
+        );
+        let till_solar_event = if let SunStats::Calculated(ref info) = self.sun_stats {
+            [info.sunrise, info.sunset]
+                .iter()
+                .filter_map(|t| u64::try_from(t.timestamp() - now.timestamp()).ok())
+                .min()
+                .unwrap_or(till_midnight)
+        } else {
+            till_midnight
+        };
+
+        Duration::from_secs(min(till_location_ttl, till_solar_event) + 60)
     }
 
 }
