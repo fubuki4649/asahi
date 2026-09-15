@@ -1,6 +1,6 @@
 use crate::location::providers::provider_trait::LocationProvider;
 use crate::location::types::Location;
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use log::{info, warn};
 use std::sync::Mutex;
 
@@ -17,34 +17,42 @@ use std::sync::Mutex;
 pub struct LocationProviderWrapper {
     providers: Vec<Box<dyn LocationProvider + Send + Sync>>,
     latest_location: Mutex<Location>,
+    ttl: u64,
 }
 
 impl LocationProviderWrapper {
-    pub fn new(providers: Vec<Box<dyn LocationProvider + Send + Sync>>) -> Self {
+    pub fn new(providers: Vec<Box<dyn LocationProvider + Send + Sync>>, ttl: u64) -> Self {
         Self {
             providers,
             latest_location: Mutex::new(Location::from_cache().unwrap_or_default()),
+            ttl
         }
     }
 }
 
 impl LocationProvider for LocationProviderWrapper {
     fn get_location(&self) -> Result<Location, Error> {
-        // Try each provider in order until one succeeds
-        for provider in &self.providers {
-            match provider.get_location() {
-                Ok(location) => {
-                    *self.latest_location.lock().unwrap() = location.clone();
-                    return Ok(location)
-                },
-                Err(e) => warn!("Location provider failed: {e}"),
+        let mut latest_location = self.latest_location.lock().map_err(|err| anyhow!(err.to_string()))?;
+
+        // If the previously calculated location is expired, try to update it
+        if !latest_location.validate(self.ttl) {
+            // Try each provider in order until one succeeds
+            for provider in &self.providers {
+                match provider.get_location() {
+                    Ok(location) => {
+                        *latest_location = location.clone();
+                        return Ok(location)
+                    },
+                    Err(e) => warn!("Location provider failed: {e}"),
+                }
             }
+
+            info!("Failed to refresh location. Falling back to cached location");
         }
 
-        info!("Failed to refresh location. Falling back to cached location");
-
-        // If nothing works, check for a previously cached location
-        Ok(self.latest_location.lock().unwrap().clone())
+        // If the last location is still valid,
+        // or a new location could not be determined, return the last known location instead
+        Ok(latest_location.clone())
     }
 
     fn on_cleanup(&self) {

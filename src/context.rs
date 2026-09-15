@@ -7,7 +7,7 @@ use crate::location::Location;
 use crate::sun::sun_info::SunInfo;
 use crate::sun::sun_stats::SunStats;
 use chrono::Local;
-use log::{debug, info, warn};
+use log::{debug, info};
 
 pub struct Context {
     location_provider: LocationProviderWrapper,
@@ -17,10 +17,6 @@ pub struct Context {
     // sun_stats is `Override(i32)` if there's a manual override in place
     pub sun_stats: SunStats,
 
-    // Config values loaded from /etc/asahi/config.toml and ~/.config/asahi/config.toml
-    /// How long location data stays valid (seconds). Default: 3600 (1 hour).
-    pub location_ttl: u64,
-    /// How often to check for sunrise/sunset (seconds). Default: 600 (10 minutes).
     pub sunset_check_frequency: u64,
 }
 
@@ -48,9 +44,8 @@ impl Default for Context {
 
         Self {
             location: Location::default(),
-            location_provider: LocationProviderWrapper::new(providers),
+            location_provider: LocationProviderWrapper::new(providers, location_ttl),
             sun_stats: SunStats::Calculated(SunInfo::default()),
-            location_ttl,
             sunset_check_frequency,
         }
     }
@@ -63,13 +58,16 @@ impl Context {
     }
 
     /// Recalculates the sunrise/sunset times if out of date
-    fn update_sunrise(&mut self) {
+    ///
+    /// `force_recalc` - Forces recalculation of today's sunrise/sunset times; typically useful
+    /// after the location has been updated too
+    fn update_sunrise(&mut self, force_recalc: bool) {
         // Only update if there's no manual override present
         if let SunStats::Calculated(stats) = &mut self.sun_stats {
             let now = Local::now().naive_local();
 
             // If we're on a new day, update sunrise/sunset readings
-            if now.date() > stats.sunset.naive_local().date() {
+            if force_recalc || now.date() > stats.sunset.naive_local().date() {
                 stats.update(&self.location);
                 info!("Updated Sunrise/Sunset for {} at lat: {}, lon: {}", now, self.location.lat, self.location.lon);
                 debug!("Sunrise: {}, Sunset: {}", stats.sunrise, stats.sunset);
@@ -78,26 +76,21 @@ impl Context {
     }
 
     /// Recalculates location data if out of date
-    fn update_location(&mut self) {
-        if !self.location.validate(self.location_ttl) {
-            match self.location_provider.get_location() {
-                Ok(location) => {
-                    self.location = location;
-                    self.update_sunrise();
-                }
-                Err(e) => warn!("Failed to update location, retaining last known location: {e}"),
-            }
+    pub fn update_location(&mut self) {
+        if let Ok(location) = self.location_provider.get_location() {
+            self.location = location;
         }
     }
 
-    pub fn calculate_dark_mode(&mut self) -> u32 {
+    /// `force_recalc` - Forces recalculation of today's sunrise/sunset times; typically useful
+    /// after the location has been updated too
+    pub fn calculate_dark_mode(&mut self, force_recalc: bool) -> u32 {
         if let SunStats::Override(mode) = self.sun_stats {
             return mode.cast_unsigned();
         }
 
-        // Make sure everything's still fresh
-        self.update_location();
-        self.update_sunrise();
+        // Make sure the sunrise/sunset times are still OK
+        self.update_sunrise(force_recalc);
 
         // We only care about local time
         if let SunStats::Calculated(ref stats) = self.sun_stats {

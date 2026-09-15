@@ -26,7 +26,7 @@ impl Control {
         
         // Set override mode and get the new dark mode value.
         ctx.set_theme_override(override_mode);
-        let new_value = ctx.calculate_dark_mode();
+        let new_value = ctx.calculate_dark_mode(true);
         
         drop(ctx);
 
@@ -80,7 +80,7 @@ impl Control {
     fn today_transition_times(&self) -> (String, String) {
         let mut ctx = CONTEXT.lock_recover();
         // Trigger the stale-data check so sun_stats reflects today's wall-clock date.
-        ctx.calculate_dark_mode();
+        ctx.calculate_dark_mode(false);
         let result = match &ctx.sun_stats {
             SunStats::Calculated(stats) => (
                 stats.sunrise.naive_local().format("%Y-%m-%d %I:%M:%S %p").to_string(),

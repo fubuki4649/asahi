@@ -62,35 +62,44 @@ fn main() {
     }
 
 
-    // Broadcast immediately on startup so clients don't have to wait up to
-    // `sunset_check_frequency` seconds for the first mode signal.
-    broadcast_current_mode();
+    // Broadcast immediately on startup
+    broadcast_current_theme(false);
+    broadcast_current_theme(true);
 
     let check_frequency = Duration::from_secs(CONTEXT.lock_recover().sunset_check_frequency);
 
     loop {
         sleep(check_frequency);
-        broadcast_current_mode();
+
+        // First broadcast with old location, then update, because updating location is a network
+        // operation and thus potentially slow
+        broadcast_current_theme(false);
+        broadcast_current_theme(true);
     }
 
 }
 
 /// Calculates the current dark mode value and — if it has changed since the
 /// last broadcast — emits a D-Bus signal and runs the appropriate hooks.
-fn broadcast_current_mode() {
+///
+/// `with_location` - Also updates the location and forces a recalculation of today's sunrise/sunset
+/// times before broadcasting
+fn broadcast_current_theme(with_location: bool) {
     let mut ctx = CONTEXT.lock_recover();
     // Do nothing if an override is set
     if ctx.sun_stats.has_override() { return; }
 
-    let new_value = ctx.calculate_dark_mode();
+    // Refresh location before getting dark mode if `with_location` is set.
+    if with_location { ctx.update_location() }
+    let new_theme_value = ctx.calculate_dark_mode(with_location);
     drop(ctx);
 
     // If the color theme has changed from the previous broadcast, broadcast the new value and run hooks
     let mut portal = PORTAL.lock_recover();
-    if portal.prev_broadcast_val != new_value {
-        portal.broadcast_darkmode(new_value);
+    if portal.prev_broadcast_val != new_theme_value {
+        portal.broadcast_darkmode(new_theme_value);
         drop(portal);
         
-        hooks::run_hooks(new_value);
+        hooks::run_hooks(new_theme_value);
     }
 }
