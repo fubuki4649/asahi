@@ -1,6 +1,6 @@
 use crate::_utils::mutex_ext::MutexExt;
 use crate::sun::sun_stats::SunStats;
-use crate::{hooks, CONTEXT, PORTAL};
+use crate::{broadcast_current_theme, hooks, CONTEXT, PORTAL};
 use zbus::interface;
 
 pub struct Control;
@@ -39,6 +39,16 @@ impl Control {
             hooks::run_hooks(new_value);
         }
         
+    }
+
+    /// `forceUpdate` method - used by the CLI tool to force a location refresh and theme rebroadcast.
+    /// Equivalent to an immediate wake-up cycle: updates location, recalculates sunrise/sunset,
+    /// and emits a D-Bus signal + runs hooks if the theme value changed.
+    /// No-op when a manual override is active.
+    #[zbus(name = "forceUpdate")]
+    #[allow(clippy::unused_self)]
+    fn force_update(&self) {
+        broadcast_current_theme(true);
     }
 
     /// Allow querying of the current manual control setting as a property

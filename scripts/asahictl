@@ -23,6 +23,7 @@ COMMANDS:
                                   Values: off, dark, light, nopref
     query [target]                Query daemon state and telemetry
                                   Targets: all, theme, today, location
+    update                        Force an immediate location refresh and theme rebroadcast
 
 EXAMPLES:
     $SCRIPT_NAME override off         Disable manual override and determine mode automatically
@@ -164,6 +165,15 @@ query_daemon() {
     esac
 }
 
+# Forces an immediate location refresh and theme rebroadcast via D-Bus
+force_update() {
+    if ! reply=$(busctl --user call -- "$DBUS_DEST" "$DBUS_PATH" "$DBUS_IFACE" forceUpdate 2>&1); then
+        echo "Error: Failed to force update: $reply" >&2
+        return 1
+    fi
+    echo "Update triggered"
+}
+
 # Main logic
 main() {
     case "$1" in
@@ -181,6 +191,10 @@ main() {
             ;;
         "query")
             query_daemon "$2"
+            exit $?
+            ;;
+        "update")
+            force_update
             exit $?
             ;;
         "")
