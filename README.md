@@ -81,11 +81,12 @@ In addition to `org.freedesktop.impl.portal.Settings`, `asahi` exposes a custom 
 
 #### Methods
 * `setManualDarkMode(int32)`: Sets or clears a manual theme override (`-1` = Automatic, `0` = No Preference, `1` = Dark, `2` = Light).
+* `forceUpdate()`: Forces an immediate location refresh, solar recalculation, and theme rebroadcast. No-op when a manual override is active.
 
 #### Properties (Read-Only)
 * `currentTheme` (`u32`): Theme currently being broadcast (`0` = No Preference, `1` = Dark, `2` = Light).
 * `isOverrideSet` (`bool`): Whether a manual override is active.
-* `todayTransitionTimes` (`(string, string)`): Expected time of today's sunrise/sunset times as RFC 3339 timestamp in the local timezone.
+* `todayTransitionTimes` (`(string, string)`): Today's sunrise and sunset times, formatted as `YYYY-MM-DD HH:MM:SS AM/PM`. Returns empty strings when a manual override is active.
 * `location` (`(double, double)`): Coordinates currently used for solar calculations.
 
 ### FIREFOX

@@ -26,21 +26,3 @@
 
 # How long a location fix is considered valid before being refreshed (seconds).
 # location_ttl = 3600
-
-
-# ── Sunrise / Sunset ─────────────────────────────────────────────────────────
-
-# How often the daemon checks whether the mode should change (seconds).
-# sunset_check_frequency = 600
-
-# Shift the point at which "daytime" begins, relative to true astronomical
-# sunrise. Negative values make the switch happen earlier; positive = later.
-# Units: minutes.
-#
-# sunrise_offset = 0
-
-# Shift the point at which "daytime" ends, relative to true astronomical
-# sunset. Negative values make the switch happen earlier; positive = later.
-# Units: minutes.
-#
-# sunset_offset = 0
