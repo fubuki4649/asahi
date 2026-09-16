@@ -2,7 +2,7 @@ use crate::_utils::mutex_ext::MutexExt;
 use crate::config::{load_config, Value};
 use crate::context::Context;
 use crate::dbus::listener::{spawn_listeners, WakeEvent};
-use crate::dbus::portals::portal_connection::PortalConnection;
+use crate::dbus::portals::PortalConnection;
 use log::warn;
 use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;

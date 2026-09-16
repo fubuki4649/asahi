@@ -1,5 +1,5 @@
 use crate::_utils::mutex_ext::MutexExt;
-use crate::sun::sun_stats::SunStats;
+use crate::sun::SunStats;
 use crate::{broadcast_current_theme, hooks, CONTEXT, PORTAL};
 use zbus::interface;
 

@@ -34,6 +34,7 @@ EXAMPLES:
     $SCRIPT_NAME query theme          Print the current theme and override status
     $SCRIPT_NAME query today          Print today's expected sunrise and sunset times
     $SCRIPT_NAME query location       Print the location currently used for calculations
+    $SCRIPT_NAME update               Immediately forces a location update, recalculation of sunrise/sunset times, and re-broadcasts
 
 OPTIONS:
   -h, --help                      Show this help message

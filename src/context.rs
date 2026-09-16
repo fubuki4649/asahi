@@ -1,11 +1,7 @@
 use crate::config::{load_config, Value};
-use crate::location::providers::ip::IpLocationProvider;
-use crate::location::providers::manual::ManualLocationProvider;
-use crate::location::providers::provider_trait::LocationProvider;
-use crate::location::providers::wrapper::LocationProviderWrapper;
+use crate::location::providers::{IpLocationProvider, LocationProvider, LocationProviderWrapper, ManualLocationProvider};
 use crate::location::Location;
-use crate::sun::sun_info::SunInfo;
-use crate::sun::sun_stats::SunStats;
+use crate::sun::{SunInfo, SunStats};
 use chrono::{Local, Timelike};
 use log::{debug, info};
 use std::cmp::min;
