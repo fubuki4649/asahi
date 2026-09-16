@@ -1,6 +1,6 @@
 use std::ops::Deref;
-use crate::dbus_portal::management::Control;
-use crate::dbus_portal::xdg_interfaces::XDGInterfaces;
+use crate::dbus::portals::mgmt_iface::Control;
+use crate::dbus::portals::xdg_iface::XDGInterfaces;
 use anyhow::Error;
 use log::info;
 use zbus::block_on;

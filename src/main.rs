@@ -1,14 +1,15 @@
 use crate::_utils::mutex_ext::MutexExt;
 use crate::config::{load_config, Value};
 use crate::context::Context;
-use crate::dbus_portal::portal_connection::PortalConnection;
+use crate::dbus::listener::{spawn_listeners, WakeEvent};
+use crate::dbus::portals::portal_connection::PortalConnection;
 use log::warn;
 use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
-use std::sync::{LazyLock, Mutex};
-use std::thread::sleep;
+use std::sync::mpsc::RecvTimeoutError;
+use std::sync::{mpsc, LazyLock, Mutex};
 
-mod dbus_portal;
+mod dbus;
 pub mod context;
 mod location;
 mod _utils;
@@ -65,24 +66,42 @@ fn main() {
     broadcast_current_theme(false);
     broadcast_current_theme(true);
 
+    let (tx, rx) = mpsc::channel::<WakeEvent>();
+    spawn_listeners(tx);
+
     loop {
         let sleep_period = CONTEXT.lock_recover().next_wakeup();
-        sleep(sleep_period);
 
-        // First broadcast with old location, then update, because updating location is a network
-        // operation and thus potentially slow
-        broadcast_current_theme(false);
-        broadcast_current_theme(true);
+        match rx.recv_timeout(sleep_period) {
+            Ok(WakeEvent::SystemResume) => {
+                // Offline fast-path: use cached location, correct theme immediately on wake
+                // This is primarily to catch situations where the device has slept past a solar event
+                broadcast_current_theme(false);
+            }
+            Ok(WakeEvent::NetworkConnect) => {
+                // Just connected to a network: refresh location and update themes
+                broadcast_current_theme(true);
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                // Standard wakeup - default behavior (refresh location and timing)
+                broadcast_current_theme(false);
+                broadcast_current_theme(true);
+            }
+            Err(_) => {
+                log::error!("All listener threads have died unexpectedly. This should basically never happen and is a likely a d-bus problem.");
+                panic!("Catastrophic failure!");
+            }
+        }
     }
-
 }
+
 
 /// Calculates the current dark mode value and — if it has changed since the
 /// last broadcast — emits a D-Bus signal and runs the appropriate hooks.
 ///
 /// `with_location` - Also updates the location and forces a recalculation of today's sunrise/sunset
 /// times before broadcasting
-fn broadcast_current_theme(with_location: bool) {
+pub fn broadcast_current_theme(with_location: bool) {
     let mut ctx = CONTEXT.lock_recover();
     // Do nothing if an override is set
     if ctx.sun_stats.has_override() { return; }
