@@ -4,7 +4,7 @@
 # Usage: asahictl [command] [value]
 
 SCRIPT_NAME="asahictl"
-VERSION="1.0.0"
+VERSION="0.2.0"
 
 DBUS_DEST="org.freedesktop.impl.portal.desktop.asahi"
 DBUS_PATH="/org/freedesktop/portal/desktop"
